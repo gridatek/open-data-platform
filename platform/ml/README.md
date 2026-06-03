@@ -1,3 +1,34 @@
 # ml — JupyterHub + MLflow (≈ CML)
 
-Machine Learning: JupyterHub notebooks + MLflow tracking/serving.
+Machine Learning: **MLflow** for experiment tracking + model registry, with
+notebooks (the Phase 0 `spark-iceberg` image already ships a Jupyter on :8888;
+a multi-user JupyterHub is a later step).
+
+```
+ml/
+└── log-run.sh   # log a run to MLflow via REST and read it back (the proof)
+```
+
+## Run (Phase 3 overlay)
+
+From `quickstart/`:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.services.yml up -d mlflow
+../platform/ml/log-run.sh
+```
+
+MLflow UI: http://localhost:5000. The server keeps metadata in SQLite and stores
+artifacts in **MinIO** (`s3://mlflow`) via `--serve-artifacts`, so ML artifacts
+live in the same object store as the lakehouse. The script creates an experiment,
+logs a param + metric, finishes the run, and asserts it reads back. CI runs this
+in `.github/workflows/services-ci.yml`.
+
+## ⚠️ Rough edges
+
+- `boto3` is `pip install`ed at container start (no custom image yet).
+- SQLite backend store is single-process / laptop-only; real deployments use
+  Postgres. Artifacts in MinIO are the production-shaped part.
+- The proof logs metadata via REST; it doesn't yet upload an artifact through
+  the MinIO path. Logging a model from a notebook (`mlflow.log_artifact`) is the
+  next step, alongside multi-user JupyterHub.

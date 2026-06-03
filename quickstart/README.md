@@ -95,3 +95,18 @@ docker compose -f docker-compose.yml -f docker-compose.governance.yml up -d --bu
 
 See [`../platform/governance/README.md`](../platform/governance/README.md) for
 the full walkthrough and the masking proof.
+
+## Phase 3 — breadth of data services
+
+Add analytic/orchestration services that consume the same governed lakehouse:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.services.yml up -d
+```
+
+- **Superset** (BI) → http://localhost:8088 — see
+  [`../platform/viz/README.md`](../platform/viz/README.md)
+- **Airflow** (orchestration) → http://localhost:8082 — see
+  [`../platform/engineering/README.md`](../platform/engineering/README.md)
+- **MLflow** (experiment tracking) → http://localhost:5000 — see
+  [`../platform/ml/README.md`](../platform/ml/README.md)

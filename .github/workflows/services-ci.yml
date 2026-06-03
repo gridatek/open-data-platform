@@ -1,0 +1,141 @@
+name: services-ci
+
+# Phase 3: prove the breadth services work against the governed lakehouse.
+#  - Superset: runs a SQL Lab query through Trino against iceberg.smoke.events
+#  - Airflow:  the example DAG parses and is listed
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "quickstart/docker-compose.services.yml"
+      - "platform/viz/**"
+      - "platform/engineering/**"
+      - "platform/ml/**"
+      - ".github/workflows/services-ci.yml"
+  pull_request:
+    paths:
+      - "quickstart/docker-compose.services.yml"
+      - "platform/viz/**"
+      - "platform/engineering/**"
+      - "platform/ml/**"
+      - ".github/workflows/services-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  superset-query:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quickstart
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create .env from example
+        run: cp .env.example .env
+
+      - name: Start lakehouse + Superset (and Spark to seed)
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml up -d superset spark
+
+      - name: Wait for the Iceberg REST catalog
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8181/v1/config >/dev/null && exit 0
+            echo "waiting for REST ($i)..."; sleep 5
+          done; exit 1
+
+      - name: Wait for Trino
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8080/v1/info >/dev/null && exit 0
+            echo "waiting for Trino ($i)..."; sleep 5
+          done; exit 1
+
+      - name: Seed the demo table from Spark
+        run: docker compose exec -T spark spark-submit /home/iceberg/jobs/seed_lakehouse.py
+
+      - name: Wait for Superset
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8088/health >/dev/null && exit 0
+            echo "waiting for Superset ($i)..."; sleep 10
+          done; exit 1
+
+      - name: Register Trino in Superset and run a query
+        run: bash ../platform/viz/register-trino.sh
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml logs --no-color superset trino
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml down -v
+
+  airflow-dag:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quickstart
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create .env from example
+        run: cp .env.example .env
+
+      - name: Start Airflow
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml up -d airflow
+
+      - name: Wait for Airflow
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8082/health >/dev/null && exit 0
+            echo "waiting for Airflow ($i)..."; sleep 10
+          done; exit 1
+
+      - name: Assert the example DAG parses and is listed
+        run: |
+          for i in $(seq 1 12); do
+            if docker compose exec -T airflow airflow dags list | grep -q lakehouse_smoke; then
+              echo "DAG found"; exit 0
+            fi
+            echo "waiting for DAG parse ($i)..."; sleep 10
+          done
+          echo "lakehouse_smoke DAG not found"; exit 1
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml logs --no-color airflow
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml down -v
+
+  mlflow-track:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quickstart
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create .env from example
+        run: cp .env.example .env
+
+      - name: Start MLflow (and MinIO via its bucket init)
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml up -d mlflow
+
+      - name: Wait for MLflow
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:5000/health >/dev/null && exit 0
+            echo "waiting for MLflow ($i)..."; sleep 5
+          done; exit 1
+
+      - name: Log a run and read it back
+        run: bash ../platform/ml/log-run.sh
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml logs --no-color mlflow mlflow-init
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml down -v

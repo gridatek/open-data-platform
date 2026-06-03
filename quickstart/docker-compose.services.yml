@@ -1,0 +1,128 @@
+# ───────────────────────────────────────────────────────────────
+# Phase 3 — breadth of data services (overlay on the Phase 0 lakehouse)
+#
+#   Superset (BI / viz)  ─┐
+#                         ├─▶ Trino ─▶ governed Iceberg tables
+#   Airflow (orchestration)
+#
+# Run with the base lakehouse:
+#   docker compose -f docker-compose.yml -f docker-compose.services.yml up -d
+#
+#   Superset : http://localhost:8088   (admin / admin)
+#   Airflow  : http://localhost:8082   (admin / admin — printed by `standalone`)
+# ───────────────────────────────────────────────────────────────
+
+name: odp-quickstart
+
+services:
+  # ── Superset: BI over the lakehouse via Trino (≈ CDW / Data Viz) ──
+  superset:
+    image: apache/superset:4.1.1
+    container_name: odp-superset
+    depends_on:
+      - trino
+    environment:
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:-odp-dev-secret-change-me}
+      SUPERSET_CONFIG_PATH: /app/superset_config.py
+    volumes:
+      - ../platform/viz/superset/superset_config.py:/app/superset_config.py:ro
+      - superset-home:/app/superset_home
+    ports:
+      - "8088:8088"
+    # Install the Trino dialect, init the metadata DB + admin, then serve.
+    command:
+      - /bin/sh
+      - -c
+      - |
+        pip install --no-cache-dir 'trino>=0.330' &&
+        superset db upgrade &&
+        superset fab create-admin --username admin --firstname Admin \
+          --lastname User --email admin@odp.local --password admin || true &&
+        superset init &&
+        /usr/bin/run-server.sh
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+      start_period: 120s
+    networks:
+      - odp
+
+  # ── Airflow: orchestration (≈ CDE). Single-process standalone for the laptop. ──
+  airflow:
+    image: apache/airflow:2.10.4
+    container_name: odp-airflow
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+    volumes:
+      - ../platform/engineering/airflow/dags:/opt/airflow/dags:ro
+      - airflow-home:/opt/airflow
+    ports:
+      - "8082:8080"   # host 8082 (8080 is Trino)
+    command: ["bash", "-c", "airflow standalone"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+      start_period: 90s
+    networks:
+      - odp
+
+  # ── Create the MLflow artifact bucket in MinIO, then exit ────
+  mlflow-init:
+    image: minio/mc:latest
+    container_name: odp-mlflow-init
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 $${AWS_ACCESS_KEY_ID} $${AWS_SECRET_ACCESS_KEY}; do echo 'waiting for minio...'; sleep 2; done;
+      mc mb --ignore-existing local/mlflow;
+      echo 'mlflow bucket ready';
+      "
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+    networks:
+      - odp
+
+  # ── MLflow tracking server (≈ Cloudera AI / CML) ─────────────
+  # Metadata in SQLite; artifacts in MinIO (s3://mlflow) via --serve-artifacts.
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.17.2
+    container_name: odp-mlflow
+    depends_on:
+      - mlflow-init
+    environment:
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow-data:/mlflow
+    command:
+      - /bin/sh
+      - -c
+      - |
+        pip install --no-cache-dir boto3 &&
+        mlflow server --host 0.0.0.0 --port 5000 \
+          --backend-store-uri sqlite:////mlflow/mlflow.db \
+          --artifacts-destination s3://mlflow/ --serve-artifacts
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
+    networks:
+      - odp
+
+volumes:
+  superset-home:
+  airflow-home:
+  mlflow-data:
