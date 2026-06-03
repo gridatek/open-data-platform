@@ -78,9 +78,17 @@ this in `.github/workflows/governance-ci.yml`.
 
 Written to iterate against CI, not validated locally:
 
-- **Ranger config coordinates** in `ranger-trino-security.xml` and the
-  `ranger.plugin.config.resource` lookup path may still need tuning to where
-  Trino 479 actually resolves those resource files.
+- **Property keys are verified** against the Trino 479 docs:
+  `access-control.properties` uses `ranger.service.name` +
+  `ranger.plugin.config.resource` (singular), and every key in
+  `ranger-trino-security.xml` matches the documented schema
+  (`ranger.plugin.trino.policy.rest.url`, `.access.cluster.name`,
+  `.use.rangerGroups`, `.super.users`, …).
+- **Remaining unknown — classpath resolution.** The docs say relative resource
+  names are "resolved dynamically by searching on the classpath" but give no
+  absolute path. We mount the `ranger-*.xml` into `/etc/trino`; if Trino
+  doesn't search there, they may need to move onto the plugin classpath. This
+  is the most likely first CI failure.
 - **Atlas** uses a community image as a placeholder and is wired for lineage
   later; it isn't part of the masking proof yet.
 - **Default-deny:** Ranger denies unless a policy allows, hence the explicit
