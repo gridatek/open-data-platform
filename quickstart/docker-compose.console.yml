@@ -1,0 +1,38 @@
+# ───────────────────────────────────────────────────────────────
+# Phase 4 — the console as a control plane (containerized API).
+#
+# Overlay that runs the console API in-stack so it can reach the services by
+# name (ranger-admin, trino, ...). Combine with the lakehouse + governance:
+#
+#   docker compose \
+#     -f docker-compose.yml \
+#     -f docker-compose.governance.yml \
+#     -f docker-compose.console.yml \
+#     up -d --build
+#
+#   Console API : http://localhost:8090/api/services
+# ───────────────────────────────────────────────────────────────
+
+name: odp-quickstart
+
+services:
+  console-api:
+    build:
+      context: ../console/api
+    image: odp/console-api:latest
+    container_name: odp-console-api
+    environment:
+      ODP_CATALOG_REST_URL: http://iceberg-rest:8181
+      ODP_RANGER_URL: http://ranger-admin:6080
+      ODP_RANGER_SERVICE_NAME: trino-odp
+      ODP_RANGER_USERNAME: admin
+      ODP_RANGER_PASSWORD: "rangerR0cks!"
+      ODP_HEALTH_MINIO: http://minio:9000/minio/health/live
+      ODP_HEALTH_CATALOG: http://iceberg-rest:8181/v1/config
+      ODP_HEALTH_TRINO: http://trino:8080/v1/info
+      ODP_HEALTH_RANGER: http://ranger-admin:6080/login.jsp
+      ODP_HEALTH_ATLAS: http://atlas:21000/api/atlas/admin/version
+    ports:
+      - "8090:8090"
+    networks:
+      - odp

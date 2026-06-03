@@ -1,8 +1,9 @@
 # console — control plane (≈ Cloudera Manager)
 
 The management console: a **Spring Boot API** + **Angular/Tailwind UI** over the
-platform's backing services. Phase 2 is the **read-only MVP** — it observes, it
-does not yet provision or edit.
+platform's backing services. Phase 2 was the **read-only MVP**; Phase 4 makes it
+a **control plane** — it can now edit governance (enable/disable Ranger policies).
+Service provisioning/scaling (the K8s side) is stubbed at 501 until Phase 4b.
 
 ```
 console/

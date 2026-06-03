@@ -1,16 +1,31 @@
 # console/api — Spring Boot
 
-Read-only control-plane API (Phase 2). Java 21, Spring Boot 3.3, Maven.
+Control-plane API. Java 21, Spring Boot 3.3, Maven. Read-only in Phase 2; Phase 4
+adds governance **writes** (edit Ranger policies).
 
 ## Endpoints
 
-| Method & path                              | Returns                                   |
-|--------------------------------------------|-------------------------------------------|
-| `GET /api/services`                        | each service + `UP`/`DOWN` (health probe) |
-| `GET /api/catalog/namespaces`              | Iceberg namespaces (dotted paths)         |
-| `GET /api/catalog/namespaces/{ns}/tables`  | table names in a namespace                |
-| `GET /api/policies`                        | Ranger policies on `trino-odp`            |
-| `GET /actuator/health`                     | the console's own health                  |
+| Method & path                                | Does                                       |
+|----------------------------------------------|--------------------------------------------|
+| `GET  /api/services`                         | each service + `UP`/`DOWN` (health probe)  |
+| `GET  /api/catalog/namespaces`               | Iceberg namespaces (dotted paths)          |
+| `GET  /api/catalog/namespaces/{ns}/tables`   | table names in a namespace                 |
+| `GET  /api/policies`                         | Ranger policies on `trino-odp` (with `id`) |
+| `POST /api/policies`                         | **create** a policy (raw Ranger JSON body) |
+| `PUT  /api/policies/{id}`                    | **replace** a policy                       |
+| `POST /api/policies/{id}/enabled`            | **enable/disable** — `{"enabled":bool}`    |
+| `POST /api/services/{name}/restart`          | 501 — needs K8s (Phase 4b)                 |
+| `POST /api/services/{name}/scale`            | 501 — needs K8s (Phase 4b)                 |
+| `GET  /actuator/health`                      | the console's own health                   |
+
+The headline Phase 4 action is `POST /api/policies/{id}/enabled` — toggling the
+masking policy from the console flips column masking in Trino.
+
+## Container
+
+```bash
+docker build -t odp/console-api .     # multi-stage; or use docker-compose.console.yml
+```
 
 ## Run / test
 
@@ -38,8 +53,9 @@ src/main/java/com/gridatek/odp/console/
 ├── config/      # ConsoleProperties, HttpClientConfig (RestClient), WebConfig (CORS)
 ├── health/      # /api/services — HTTP health probes
 ├── catalog/     # /api/catalog/** — Iceberg REST proxy
-└── policy/      # /api/policies — Ranger REST proxy
+├── policy/      # /api/policies — Ranger REST proxy (read + write)
+└── control/     # /api/services/{name}/** — lifecycle stubs (501, Phase 4b)
 ```
 
-> Read-only by design: CORS allows `GET` only, and there are no write paths.
-> Provisioning + policy editing arrive in Phase 4.
+> Governance writes are live (CORS allows `GET/POST/PUT`). Service lifecycle
+> (provision/scale) is stubbed at 501 until the K8s integration lands in Phase 4b.

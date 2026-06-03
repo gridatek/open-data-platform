@@ -1,0 +1,112 @@
+name: console-control-ci
+
+# Phase 4 proof: the console drives governance. Disable the masking policy
+# THROUGH THE CONSOLE API and watch the analyst's Trino query go from masked
+# to clear; re-enable it and watch it mask again.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "console/**"
+      - "platform/governance/**"
+      - "quickstart/docker-compose.console.yml"
+      - ".github/workflows/console-control-ci.yml"
+  pull_request:
+    paths:
+      - "console/**"
+      - "platform/governance/**"
+      - "quickstart/docker-compose.console.yml"
+      - ".github/workflows/console-control-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  policy-toggle:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quickstart
+    env:
+      # docker compose picks up all three files automatically (colon-separated).
+      COMPOSE_FILE: docker-compose.yml:docker-compose.governance.yml:docker-compose.console.yml
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create .env from example
+        run: cp .env.example .env
+
+      - name: Build and start lakehouse + governance + console
+        run: docker compose up -d --build console-api spark trino
+
+      - name: Wait for Trino
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8080/v1/info >/dev/null && exit 0
+            echo "waiting for Trino ($i)..."; sleep 5
+          done; exit 1
+
+      - name: Wait for Ranger admin
+        run: |
+          for i in $(seq 1 90); do
+            curl -sf -u "admin:rangerR0cks!" \
+              http://localhost:6080/service/public/v2/api/service >/dev/null && exit 0
+            echo "waiting for Ranger ($i)..."; sleep 10
+          done; exit 1
+
+      - name: Wait for the console API
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8090/actuator/health >/dev/null && exit 0
+            echo "waiting for console ($i)..."; sleep 5
+          done; exit 1
+
+      - name: Seed the table and load the policies
+        run: |
+          docker compose exec -T spark spark-submit /home/iceberg/jobs/seed_lakehouse.py
+          bash ../platform/governance/load-policies.sh
+          sleep 45   # let the Trino plugin poll
+
+      - name: Helper — analyst's view of the masked column
+        run: |
+          echo '#!/usr/bin/env bash' > /tmp/kind.sh
+          echo 'docker compose exec -T trino trino --user analyst \
+            --execute "SELECT kind FROM iceberg.smoke.events WHERE id = 4" | tr -d "\"[:space:]"' >> /tmp/kind.sh
+          chmod +x /tmp/kind.sh
+
+      - name: Masking is ON (sanity) — analyst should NOT see 'purchase'
+        run: |
+          OUT=$(/tmp/kind.sh); echo "analyst sees: $OUT"
+          test "$OUT" != "purchase"
+
+      - name: Disable the masking policy THROUGH THE CONSOLE
+        run: |
+          ID=$(curl -sf http://localhost:8090/api/policies | jq -r '.[] | select(.type=="MASKING") | .id' | head -n1)
+          echo "masking policy id = $ID"
+          test -n "$ID"
+          curl -sf -X POST "http://localhost:8090/api/policies/$ID/enabled" \
+            -H 'Content-Type: application/json' -d '{"enabled":false}'
+          sleep 45
+
+      - name: Masking is OFF — analyst now sees 'purchase'
+        run: |
+          OUT=$(/tmp/kind.sh); echo "analyst sees: $OUT"
+          test "$OUT" = "purchase"
+
+      - name: Re-enable the policy THROUGH THE CONSOLE
+        run: |
+          ID=$(curl -sf http://localhost:8090/api/policies | jq -r '.[] | select(.type=="MASKING") | .id' | head -n1)
+          curl -sf -X POST "http://localhost:8090/api/policies/$ID/enabled" \
+            -H 'Content-Type: application/json' -d '{"enabled":true}'
+          sleep 45
+
+      - name: Masking is ON again — analyst no longer sees 'purchase'
+        run: |
+          OUT=$(/tmp/kind.sh); echo "analyst sees: $OUT"
+          test "$OUT" != "purchase"
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose logs --no-color console-api trino ranger-admin
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
