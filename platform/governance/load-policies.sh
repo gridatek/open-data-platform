@@ -15,11 +15,35 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 api() {
   # api <METHOD> <PATH> <json-file>
-  curl -sS -u "${RANGER_AUTH}" \
+  # --fail-with-body: return non-zero on HTTP >= 400 *and* still print the body,
+  # so a rejected policy aborts the script (set -e) instead of being swallowed.
+  curl -sS --fail-with-body -u "${RANGER_AUTH}" \
     -H 'Content-Type: application/json' \
     -H 'Accept: application/json' \
     -X "$1" "${RANGER_URL}$2" \
     --data-binary "@$3"
+}
+
+# Ranger refuses to create a policy that references a user it doesn't know about
+# ("User name: <x> ... does not exist in ranger admin"), so every user named in a
+# policy item must exist first. 'admin' is built in; demo users are created here.
+ensure_user() {
+  # ensure_user <name>
+  local name="$1"
+  if curl -sf -u "${RANGER_AUTH}" \
+       "${RANGER_URL}/service/xusers/users/userName/${name}" >/dev/null 2>&1; then
+    echo "[policies] Ranger user '${name}' already exists"
+    return 0
+  fi
+  echo "[policies] creating Ranger user '${name}'"
+  curl -sS --fail-with-body -u "${RANGER_AUTH}" \
+    -H 'Content-Type: application/json' -H 'Accept: application/json' \
+    -X POST "${RANGER_URL}/service/xusers/secure/users" \
+    --data-binary "{\"name\":\"${name}\",\"password\":\"Odp@Secret123\",\"firstName\":\"${name}\",\"lastName\":\"odp\",\"emailAddress\":\"\",\"userRoleList\":[\"ROLE_USER\"]}" \
+    >/dev/null
+  # Confirm it landed — fail loudly otherwise.
+  curl -sf -u "${RANGER_AUTH}" \
+    "${RANGER_URL}/service/xusers/users/userName/${name}" >/dev/null
 }
 
 echo "[policies] waiting for Ranger admin at ${RANGER_URL} ..."
@@ -29,6 +53,10 @@ done
 
 echo "[policies] creating Trino service 'trino-odp' (ignore 'already exists')"
 api POST "/service/public/v2/api/service" "${HERE}/policies/trino-service.json" || true
+echo
+
+# Users referenced by the policies below must exist in Ranger first.
+ensure_user analyst
 echo
 
 echo "[policies] applying base access policy (admin + analyst select)"
