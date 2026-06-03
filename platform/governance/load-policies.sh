@@ -46,6 +46,28 @@ ensure_user() {
     "${RANGER_URL}/service/xusers/users/userName/${name}" >/dev/null
 }
 
+# Some Trino checks (e.g. query execution) are governed by Ranger's auto-created
+# default policies, which grant only the service admin. Ranger refuses a second
+# policy with the same resource signature (e.g. queryid=*), so we can't add our
+# own — instead extend the default policy in place to also grant 'analyst'.
+grant_default_to_analyst() {
+  # grant_default_to_analyst <url-encoded-policy-name> <access-type>
+  local enc="$1" access="$2" pol id
+  pol=$(curl -sf -u "${RANGER_AUTH}" \
+        "${RANGER_URL}/service/public/v2/api/policy/service/trino-odp/name/${enc}")
+  id=$(printf '%s' "$pol" | jq -r '.id')
+  printf '%s' "$pol" | jq --arg a "$access" '
+      if any(.policyItems[]?; (.users | index("analyst")) and any(.accesses[]?; .type == $a))
+      then .
+      else .policyItems += [{"users":["analyst"],"groups":[],"roles":[],
+                             "accesses":[{"type":$a,"isAllowed":true}],
+                             "delegateAdmin":false}]
+      end' \
+    | curl -sS --fail-with-body -u "${RANGER_AUTH}" \
+        -H 'Content-Type: application/json' -H 'Accept: application/json' \
+        -X PUT "${RANGER_URL}/service/public/v2/api/policy/${id}" --data-binary @- >/dev/null
+}
+
 echo "[policies] waiting for Ranger admin at ${RANGER_URL} ..."
 until curl -sf -u "${RANGER_AUTH}" "${RANGER_URL}/service/public/v2/api/service" >/dev/null; do
   sleep 3
@@ -71,10 +93,8 @@ api POST "/service/public/v2/api/policy" "${HERE}/policies/trino-impersonation.j
         "${HERE}/policies/trino-impersonation.json"
 echo
 
-echo "[policies] allowing analyst to execute queries"
-api POST "/service/public/v2/api/policy" "${HERE}/policies/trino-query.json" \
-  || api PUT "/service/public/v2/api/policy/service/trino-odp/name/allow-analyst-execute-query" \
-        "${HERE}/policies/trino-query.json"
+echo "[policies] granting analyst EXECUTE on queries (extend default 'all - queryid')"
+grant_default_to_analyst "all%20-%20queryid" execute
 echo
 
 echo "[policies] applying masking policy for iceberg.smoke.events.kind"
