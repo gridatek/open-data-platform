@@ -1,12 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ConsoleService } from './console.service';
+import { PolicyEditorComponent } from './policy-editor.component';
 import { PolicySummary, ServiceStatus } from './models';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, PolicyEditorComponent],
   template: `
     <header class="border-b border-slate-200 bg-white">
       <div class="mx-auto max-w-5xl px-6 py-4">
@@ -62,6 +63,9 @@ import { PolicySummary, ServiceStatus } from './models';
         <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
           Ranger policies
         </h2>
+        <div class="mb-3">
+          <app-policy-editor (created)="reloadPolicies()"></app-policy-editor>
+        </div>
         <table class="w-full overflow-hidden rounded-lg border border-slate-200 bg-white text-sm">
           <thead class="bg-slate-100 text-left text-slate-500">
             <tr>
@@ -133,7 +137,7 @@ export class AppComponent implements OnInit {
     });
   }
 
-  private reloadPolicies(): void {
+  reloadPolicies(): void {
     this.console.policies().subscribe({
       next: (v) => {
         this.policies.set(v);

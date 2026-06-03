@@ -24,4 +24,9 @@ export class ConsoleService {
   setPolicyEnabled(id: number, enabled: boolean): Observable<PolicySummary> {
     return this.http.post<PolicySummary>(`/api/policies/${id}/enabled`, { enabled });
   }
+
+  /** Create a policy from a raw Ranger policy document. */
+  createPolicy(doc: unknown): Observable<PolicySummary> {
+    return this.http.post<PolicySummary>('/api/policies', doc);
+  }
 }

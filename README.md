@@ -8,6 +8,28 @@ Working name: `@gridatek/open-data-platform` (alt codenames: `openruntime`, `lak
 
 ---
 
+## Quickstart (one command)
+
+The docker-compose laptop subset brings up the whole stack:
+
+```bash
+./bootstrap.sh          # or: make all   (Windows: .\bootstrap.ps1)
+make seed               # write the demo Iceberg table
+```
+
+| | URL |
+|---|---|
+| Console (control plane) | http://localhost:8090/api/services · web http://localhost:4200 |
+| Superset / Airflow / MLflow | :8088 · :8082 · :5000 |
+| Ranger / Atlas / NiFi | :6080 · :21000 · :8095/nifi |
+
+Lighter starts: `make core` (just the lakehouse), `make governance`, `make services`.
+Then work the [labs](labs/). For Kubernetes, see the umbrella chart in
+[`platform/umbrella`](platform/umbrella/). Each phase is proven by a workflow in
+[`.github/workflows`](.github/workflows/).
+
+---
+
 ## 1. The core idea (what "follows Cloudera" actually means)
 
 Modern CDP is not "Hadoop". It is two layers:

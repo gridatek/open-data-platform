@@ -1,9 +1,12 @@
 # console/web — Angular + Tailwind
 
 The console dashboard: Angular 18 (standalone components, signals) + Tailwind.
-Phase 2 rendered three read-only panels; Phase 4 adds a **control**: each Ranger
-policy row has an **Enable/Disable** button (`POST /api/policies/{id}/enabled`)
-that flips column masking in Trino — the same action the Phase 4 E2E proves.
+Phase 2 rendered three read-only panels; Phase 4 adds **controls**:
+
+- each Ranger policy row has an **Enable/Disable** button
+  (`POST /api/policies/{id}/enabled`) that flips column masking in Trino;
+- a **New masking policy** form (`policy-editor.component.ts`, reactive forms)
+  builds a Ranger column-mask document and creates it via `POST /api/policies`.
 
 ## Run / build
 

@@ -1,0 +1,16 @@
+Open Data Platform — {{ .Chart.AppVersion }}
+
+Enabled services:
+{{- if .Values.minio.enabled }}
+  - MinIO (object storage){{ end }}
+{{- if .Values.trino.enabled }}
+  - Trino (query engine){{ end }}
+{{- if .Values.superset.enabled }}
+  - Superset (BI){{ end }}
+{{- if .Values.airflow.enabled }}
+  - Airflow (orchestration){{ end }}
+
+The SDX layer (Iceberg REST catalog, Ranger, Atlas) and the streaming/ML
+services are not wired into this chart yet — see the umbrella README.
+
+Run `kubectl get pods` to watch the platform come up.

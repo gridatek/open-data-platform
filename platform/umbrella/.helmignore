@@ -1,0 +1,7 @@
+.DS_Store
+.git
+*.tmp
+*.bak
+*.orig
+# downloaded subchart archives (helm dependency build)
+charts/*.tgz

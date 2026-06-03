@@ -1,0 +1,39 @@
+name: helm-ci
+
+# Phase 5: validate the umbrella chart — resolve dependencies and lint.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "platform/umbrella/**"
+      - ".github/workflows/helm-ci.yml"
+  pull_request:
+    paths:
+      - "platform/umbrella/**"
+      - ".github/workflows/helm-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+
+      - name: Add chart repos
+        run: |
+          helm repo add minio https://charts.min.io/
+          helm repo add trino https://trinodb.github.io/charts
+          helm repo add superset https://apache.github.io/superset
+          helm repo add apache-airflow https://airflow.apache.org
+          helm repo update
+
+      - name: Resolve dependencies
+        run: helm dependency build platform/umbrella
+
+      - name: Lint
+        run: helm lint platform/umbrella
+
+      - name: Template render (smoke)
+        run: helm template odp platform/umbrella >/dev/null

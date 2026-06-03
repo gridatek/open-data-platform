@@ -1,0 +1,30 @@
+apiVersion: v2
+name: open-data-platform
+description: >-
+  Umbrella chart for the Open Data Platform — a Kubernetes-native lakehouse with a
+  shared governance layer (SDX clone) and containerized data services.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+
+# Phase 5 scaffold. Dependencies below have official upstream charts (versions
+# pinned from each repo's index.yaml). The SDX layer (Iceberg REST catalog,
+# Ranger, Atlas) and the streaming/ML services (Kafka, NiFi, MLflow) have no
+# upstream chart yet — they become local subcharts under ./charts. See README.
+dependencies:
+  - name: minio
+    version: "5.4.0"
+    repository: https://charts.min.io/
+    condition: minio.enabled
+  - name: trino
+    version: "1.42.2"
+    repository: https://trinodb.github.io/charts
+    condition: trino.enabled
+  - name: superset
+    version: "0.15.5"
+    repository: https://apache.github.io/superset
+    condition: superset.enabled
+  - name: airflow
+    version: "1.21.0"
+    repository: https://airflow.apache.org
+    condition: airflow.enabled
