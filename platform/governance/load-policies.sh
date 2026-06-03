@@ -65,6 +65,12 @@ api POST "/service/public/v2/api/policy" "${HERE}/policies/trino-access.json" \
         "${HERE}/policies/trino-access.json"
 echo
 
+echo "[policies] allowing analyst to set its own Trino session user (impersonation)"
+api POST "/service/public/v2/api/policy" "${HERE}/policies/trino-impersonation.json" \
+  || api PUT "/service/public/v2/api/policy/service/trino-odp/name/allow-analyst-self-impersonation" \
+        "${HERE}/policies/trino-impersonation.json"
+echo
+
 echo "[policies] applying masking policy for iceberg.smoke.events.kind"
 # create-or-update by service+policy name
 api POST "/service/public/v2/api/policy" "${HERE}/policies/trino-events-mask.json" \

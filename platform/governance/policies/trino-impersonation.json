@@ -1,0 +1,16 @@
+{
+  "service": "trino-odp",
+  "name": "allow-analyst-self-impersonation",
+  "description": "Trino's Ranger plugin checks IMPERSONATE on the 'trinouser' resource when a session sets its user (checkCanSetUser). 'admin' gets this from the service's default policy; 'analyst' needs it explicitly, otherwise every `trino --user analyst` query fails with 'Principal analyst cannot become user analyst'.",
+  "policyType": 0,
+  "isEnabled": true,
+  "resources": {
+    "trinouser": { "values": ["analyst"], "isExcludes": false, "isRecursive": false }
+  },
+  "policyItems": [
+    {
+      "users": ["analyst"],
+      "accesses": [{ "type": "impersonate", "isAllowed": true }]
+    }
+  ]
+}
