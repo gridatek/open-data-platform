@@ -110,3 +110,5 @@ docker compose -f docker-compose.yml -f docker-compose.services.yml up -d
   [`../platform/engineering/README.md`](../platform/engineering/README.md)
 - **MLflow** (experiment tracking) → http://localhost:5000 — see
   [`../platform/ml/README.md`](../platform/ml/README.md)
+- **Kafka + NiFi** (streaming) → NiFi http://localhost:8095/nifi — see
+  [`../platform/flow/README.md`](../platform/flow/README.md)

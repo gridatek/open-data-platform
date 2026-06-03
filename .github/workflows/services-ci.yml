@@ -12,6 +12,7 @@ on:
       - "platform/viz/**"
       - "platform/engineering/**"
       - "platform/ml/**"
+      - "platform/flow/**"
       - ".github/workflows/services-ci.yml"
   pull_request:
     paths:
@@ -19,6 +20,7 @@ on:
       - "platform/viz/**"
       - "platform/engineering/**"
       - "platform/ml/**"
+      - "platform/flow/**"
       - ".github/workflows/services-ci.yml"
   workflow_dispatch:
 
@@ -135,6 +137,57 @@ jobs:
       - name: Dump logs on failure
         if: failure()
         run: docker compose -f docker-compose.yml -f docker-compose.services.yml logs --no-color mlflow mlflow-init
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml down -v
+
+  streaming:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quickstart
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create .env from example
+        run: cp .env.example .env
+
+      - name: Start Kafka and NiFi
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml up -d kafka nifi
+
+      - name: Wait for the Kafka broker
+        run: |
+          for i in $(seq 1 40); do
+            if docker compose exec -T kafka \
+                 /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1; then
+              echo "Kafka is up"; exit 0
+            fi
+            echo "waiting for Kafka ($i)..."; sleep 5
+          done; exit 1
+
+      - name: Produce and consume a message (round-trip proof)
+        run: |
+          docker compose exec -T kafka /opt/kafka/bin/kafka-topics.sh \
+            --bootstrap-server localhost:9092 --create --topic odp-events \
+            --partitions 1 --replication-factor 1
+          echo "hello-odp" | docker compose exec -T kafka \
+            /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic odp-events
+          OUT=$(docker compose exec -T kafka /opt/kafka/bin/kafka-console-consumer.sh \
+            --bootstrap-server localhost:9092 --topic odp-events \
+            --from-beginning --timeout-ms 15000 --max-messages 1)
+          echo "consumed: $OUT"
+          echo "$OUT" | grep -q hello-odp
+
+      - name: Wait for NiFi REST/UI
+        run: |
+          for i in $(seq 1 40); do
+            curl -sf http://localhost:8095/nifi/ >/dev/null && { echo "NiFi is up"; exit 0; }
+            echo "waiting for NiFi ($i)..."; sleep 10
+          done; exit 1
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml logs --no-color kafka nifi
 
       - name: Tear down
         if: always()
