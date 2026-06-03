@@ -1,7 +1,9 @@
 # console/web — Angular + Tailwind
 
-The Phase 2 dashboard: Angular 18 (standalone components, signals) + Tailwind,
-rendering the three read-only panels from `console/api`.
+The console dashboard: Angular 18 (standalone components, signals) + Tailwind.
+Phase 2 rendered three read-only panels; Phase 4 adds a **control**: each Ranger
+policy row has an **Enable/Disable** button (`POST /api/policies/{id}/enabled`)
+that flips column masking in Trino — the same action the Phase 4 E2E proves.
 
 ## Run / build
 

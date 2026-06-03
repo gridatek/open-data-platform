@@ -5,6 +5,7 @@ export interface ServiceStatus {
 }
 
 export interface PolicySummary {
+  id: number;
   name: string;
   type: string;
   enabled: boolean;

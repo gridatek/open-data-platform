@@ -11,7 +11,7 @@ import { PolicySummary, ServiceStatus } from './models';
     <header class="border-b border-slate-200 bg-white">
       <div class="mx-auto max-w-5xl px-6 py-4">
         <h1 class="text-xl font-semibold">Open Data Platform — Console</h1>
-        <p class="text-sm text-slate-500">Read-only control plane (Phase 2 MVP)</p>
+        <p class="text-sm text-slate-500">Control plane (Phase 4 — governance writes enabled)</p>
       </div>
     </header>
 
@@ -57,7 +57,7 @@ import { PolicySummary, ServiceStatus } from './models';
         </ul>
       </section>
 
-      <!-- Policies -->
+      <!-- Policies (with enable/disable control) -->
       <section>
         <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
           Ranger policies
@@ -68,19 +68,40 @@ import { PolicySummary, ServiceStatus } from './models';
               <th class="px-4 py-2 font-medium">Name</th>
               <th class="px-4 py-2 font-medium">Type</th>
               <th class="px-4 py-2 font-medium">Enabled</th>
+              <th class="px-4 py-2 font-medium">Action</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let p of policies()" class="border-t border-slate-100">
               <td class="px-4 py-2">{{ p.name }}</td>
               <td class="px-4 py-2">{{ p.type }}</td>
-              <td class="px-4 py-2">{{ p.enabled ? 'yes' : 'no' }}</td>
+              <td class="px-4 py-2">
+                <span
+                  class="rounded-full px-2 py-0.5 text-xs font-semibold"
+                  [class.bg-green-100]="p.enabled"
+                  [class.text-green-700]="p.enabled"
+                  [class.bg-slate-100]="!p.enabled"
+                  [class.text-slate-500]="!p.enabled"
+                  >{{ p.enabled ? 'enabled' : 'disabled' }}</span
+                >
+              </td>
+              <td class="px-4 py-2">
+                <button
+                  type="button"
+                  (click)="togglePolicy(p)"
+                  [disabled]="busy().has(p.id)"
+                  class="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium hover:bg-slate-50 disabled:opacity-50"
+                >
+                  {{ busy().has(p.id) ? '…' : p.enabled ? 'Disable' : 'Enable' }}
+                </button>
+              </td>
             </tr>
             <tr *ngIf="policies().length === 0">
-              <td class="px-4 py-3 text-slate-400" colspan="3">No policies (Ranger unavailable).</td>
+              <td class="px-4 py-3 text-slate-400" colspan="4">No policies (Ranger unavailable).</td>
             </tr>
           </tbody>
         </table>
+        <p *ngIf="error()" class="mt-2 text-xs text-red-600">{{ error() }}</p>
       </section>
     </main>
   `,
@@ -91,10 +112,44 @@ export class AppComponent implements OnInit {
   readonly services = signal<ServiceStatus[]>([]);
   readonly namespaces = signal<string[]>([]);
   readonly policies = signal<PolicySummary[]>([]);
+  readonly busy = signal<Set<number>>(new Set());
+  readonly error = signal<string | null>(null);
 
   ngOnInit(): void {
     this.console.services().subscribe({ next: (v) => this.services.set(v), error: () => {} });
     this.console.namespaces().subscribe({ next: (v) => this.namespaces.set(v), error: () => {} });
-    this.console.policies().subscribe({ next: (v) => this.policies.set(v), error: () => {} });
+    this.reloadPolicies();
+  }
+
+  togglePolicy(p: PolicySummary): void {
+    this.error.set(null);
+    this.setBusy(p.id, true);
+    this.console.setPolicyEnabled(p.id, !p.enabled).subscribe({
+      next: () => this.reloadPolicies(),
+      error: () => {
+        this.error.set(`Failed to ${p.enabled ? 'disable' : 'enable'} "${p.name}".`);
+        this.setBusy(p.id, false);
+      },
+    });
+  }
+
+  private reloadPolicies(): void {
+    this.console.policies().subscribe({
+      next: (v) => {
+        this.policies.set(v);
+        this.busy.set(new Set());
+      },
+      error: () => this.busy.set(new Set()),
+    });
+  }
+
+  private setBusy(id: number, value: boolean): void {
+    const next = new Set(this.busy());
+    if (value) {
+      next.add(id);
+    } else {
+      next.delete(id);
+    }
+    this.busy.set(next);
   }
 }
