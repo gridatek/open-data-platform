@@ -1,0 +1,16 @@
+{
+  "service": "trino-odp",
+  "name": "allow-analyst-execute-query",
+  "description": "Trino's Ranger plugin calls checkCanExecuteQuery (EXECUTE on the 'queryid' resource) for every query. 'admin' gets this from the service's default policy; without it 'analyst' fails with 'Access Denied: Cannot execute query'. Grant analyst EXECUTE on any query id.",
+  "policyType": 0,
+  "isEnabled": true,
+  "resources": {
+    "queryid": { "values": ["*"], "isExcludes": false, "isRecursive": false }
+  },
+  "policyItems": [
+    {
+      "users": ["analyst"],
+      "accesses": [{ "type": "execute", "isAllowed": true }]
+    }
+  ]
+}
