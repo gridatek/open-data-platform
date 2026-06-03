@@ -17,6 +17,15 @@ cp .env.example .env
 docker compose up -d
 ```
 
+Or with the `Makefile`:
+
+```bash
+make up      # copy .env (if missing) + docker compose up -d
+make seed    # run the Spark job that writes the demo Iceberg table
+make smoke   # read it back from Trino
+make down    # stop and wipe volumes
+```
+
 | Service       | URL                     | Notes                          |
 |---------------|-------------------------|--------------------------------|
 | Trino         | http://localhost:8080   | SQL engine; any username, no password |
@@ -33,17 +42,15 @@ through one is visible to the other. Spark's built-in catalog is named `demo`;
 Trino's (see `iceberg.properties`) is named `iceberg` — different local names,
 one shared catalog server.
 
-**1. Write a table from Spark.** Open a SQL shell in the Spark container:
+**1. Write a table from Spark** using the seed job (`make seed`, or directly):
 
 ```bash
-docker compose exec spark spark-sql
+docker compose exec spark spark-submit /home/iceberg/jobs/seed_lakehouse.py
 ```
 
-```sql
-CREATE NAMESPACE IF NOT EXISTS demo.smoke;
-CREATE TABLE demo.smoke.events (id BIGINT, kind STRING) USING iceberg;
-INSERT INTO demo.smoke.events VALUES (1, 'click'), (2, 'view');
-```
+This creates `demo.smoke.events` and writes four rows. (To do it by hand
+instead, open `docker compose exec spark spark-sql` and run the equivalent
+`CREATE NAMESPACE` / `CREATE TABLE` / `INSERT` statements.)
 
 **2. Read it back from Trino** (same `smoke` namespace, via the `iceberg` catalog):
 
@@ -55,7 +62,7 @@ docker compose exec trino trino
 SELECT * FROM iceberg.smoke.events ORDER BY id;
 ```
 
-If both engines see the two rows, Phase 0 is green: one bucket, one Iceberg
+If both engines see the four rows, Phase 0 is green: one bucket, one Iceberg
 table, written by Spark and queried by Trino through the shared REST catalog.
 This same path is exercised on every push by `.github/workflows/quickstart-ci.yml`.
 
@@ -65,9 +72,13 @@ This same path is exercised on every push by `.github/workflows/quickstart-ci.ym
 quickstart/
 ├── docker-compose.yml              # the 5 services (minio, init, rest, trino, spark)
 ├── .env.example                    # dev-only S3 creds + bucket name → copy to .env
+├── Makefile                        # up / seed / smoke / down / logs / ps
 ├── trino/etc/catalog/
 │   └── iceberg.properties          # Trino → REST catalog → MinIO
-└── spark/notebooks/                # mounted into Jupyter (http://localhost:8888)
+└── spark/
+    ├── jobs/
+    │   └── seed_lakehouse.py       # PySpark write job → demo.smoke.events
+    └── notebooks/                  # mounted into Jupyter (http://localhost:8888)
 ```
 
 > ⚠️ The credentials here are **local-dev only**. `.env` is gitignored; never

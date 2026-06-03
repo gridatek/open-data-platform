@@ -34,6 +34,16 @@ jobs:
       - name: Start the stack
         run: docker compose up -d
 
+      - name: Wait for the Iceberg REST catalog
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8181/v1/config >/dev/null; then
+              echo "REST catalog is up"; exit 0
+            fi
+            echo "waiting for REST catalog ($i)..."; sleep 5
+          done
+          echo "REST catalog did not become ready in time"; exit 1
+
       - name: Wait for Trino to be ready
         run: |
           for i in $(seq 1 60); do
@@ -44,17 +54,15 @@ jobs:
           done
           echo "Trino did not become ready in time"; exit 1
 
-      - name: Smoke test — write and read an Iceberg table via Trino
+      - name: Write the demo table from Spark
+        run: docker compose exec -T spark spark-submit /home/iceberg/jobs/seed_lakehouse.py
+
+      - name: Read it back from Trino and assert 4 rows
         run: |
-          docker compose exec -T trino trino --execute "
-            CREATE SCHEMA IF NOT EXISTS iceberg.smoke;
-            CREATE TABLE IF NOT EXISTS iceberg.smoke.events (id bigint, kind varchar);
-            INSERT INTO iceberg.smoke.events VALUES (1, 'click'), (2, 'view');
-          "
           COUNT=$(docker compose exec -T trino trino --execute \
             "SELECT count(*) FROM iceberg.smoke.events;" | tr -d '"[:space:]')
           echo "row count = $COUNT"
-          test "$COUNT" = "2"
+          test "$COUNT" = "4"
 
       - name: Dump logs on failure
         if: failure()
