@@ -1,0 +1,65 @@
+name: quickstart-ci
+
+# Phase 0 smoke test: bring up the lakehouse core and prove that the
+# Iceberg REST catalog + MinIO + Trino path actually works end to end.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "quickstart/**"
+      - ".github/workflows/quickstart-ci.yml"
+  pull_request:
+    paths:
+      - "quickstart/**"
+      - ".github/workflows/quickstart-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  lakehouse-smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quickstart
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create .env from example
+        run: cp .env.example .env
+
+      - name: Validate compose file
+        run: docker compose config
+
+      - name: Start the stack
+        run: docker compose up -d
+
+      - name: Wait for Trino to be ready
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8080/v1/info >/dev/null; then
+              echo "Trino is up"; exit 0
+            fi
+            echo "waiting for Trino ($i)..."; sleep 5
+          done
+          echo "Trino did not become ready in time"; exit 1
+
+      - name: Smoke test — write and read an Iceberg table via Trino
+        run: |
+          docker compose exec -T trino trino --execute "
+            CREATE SCHEMA IF NOT EXISTS iceberg.smoke;
+            CREATE TABLE IF NOT EXISTS iceberg.smoke.events (id bigint, kind varchar);
+            INSERT INTO iceberg.smoke.events VALUES (1, 'click'), (2, 'view');
+          "
+          COUNT=$(docker compose exec -T trino trino --execute \
+            "SELECT count(*) FROM iceberg.smoke.events;" | tr -d '"[:space:]')
+          echo "row count = $COUNT"
+          test "$COUNT" = "2"
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

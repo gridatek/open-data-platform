@@ -28,6 +28,11 @@ Tear down with `docker compose down` (add `-v` to also wipe the MinIO volume).
 
 ## Smoke test — prove Spark writes and Trino reads the *same* table
 
+Both engines talk to the **same** Iceberg REST catalog, so a table written
+through one is visible to the other. Spark's built-in catalog is named `demo`;
+Trino's (see `iceberg.properties`) is named `iceberg` — different local names,
+one shared catalog server.
+
 **1. Write a table from Spark.** Open a SQL shell in the Spark container:
 
 ```bash
@@ -35,23 +40,24 @@ docker compose exec spark spark-sql
 ```
 
 ```sql
-CREATE NAMESPACE IF NOT EXISTS demo;
-CREATE TABLE demo.events (id BIGINT, kind STRING) USING iceberg;
-INSERT INTO demo.events VALUES (1, 'click'), (2, 'view');
+CREATE NAMESPACE IF NOT EXISTS demo.smoke;
+CREATE TABLE demo.smoke.events (id BIGINT, kind STRING) USING iceberg;
+INSERT INTO demo.smoke.events VALUES (1, 'click'), (2, 'view');
 ```
 
-**2. Read it back from Trino:**
+**2. Read it back from Trino** (same `smoke` namespace, via the `iceberg` catalog):
 
 ```bash
 docker compose exec trino trino
 ```
 
 ```sql
-SELECT * FROM iceberg.demo.events ORDER BY id;
+SELECT * FROM iceberg.smoke.events ORDER BY id;
 ```
 
 If both engines see the two rows, Phase 0 is green: one bucket, one Iceberg
 table, written by Spark and queried by Trino through the shared REST catalog.
+This same path is exercised on every push by `.github/workflows/quickstart-ci.yml`.
 
 ## Files
 
