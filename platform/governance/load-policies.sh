@@ -51,10 +51,17 @@ ensure_user() {
 # policy with the same resource signature (e.g. queryid=*), so we can't add our
 # own — instead extend the default policy in place to also grant 'analyst'.
 grant_default_to_analyst() {
-  # grant_default_to_analyst <url-encoded-policy-name> <access-type>
-  local enc="$1" access="$2" pol id
+  # grant_default_to_analyst <policy-name> <access-type>
+  # Look the policy up via the service's policy list (a known-good endpoint) and
+  # match by exact name, rather than the flaky get-policy-by-name path.
+  local pname="$1" access="$2" pol id
   pol=$(curl -sf -u "${RANGER_AUTH}" \
-        "${RANGER_URL}/service/public/v2/api/policy/service/trino-odp/name/${enc}")
+          "${RANGER_URL}/service/public/v2/api/service/trino-odp/policy" \
+        | jq --arg n "$pname" 'map(select(.name == $n)) | .[0]')
+  if [ -z "$pol" ] || [ "$pol" = "null" ]; then
+    echo "[policies] ERROR: default policy '$pname' not found" >&2
+    return 1
+  fi
   id=$(printf '%s' "$pol" | jq -r '.id')
   printf '%s' "$pol" | jq --arg a "$access" '
       if any(.policyItems[]?; (.users | index("analyst")) and any(.accesses[]?; .type == $a))
@@ -94,7 +101,7 @@ api POST "/service/public/v2/api/policy" "${HERE}/policies/trino-impersonation.j
 echo
 
 echo "[policies] granting analyst EXECUTE on queries (extend default 'all - queryid')"
-grant_default_to_analyst "all%20-%20queryid" execute
+grant_default_to_analyst "all - queryid" execute
 echo
 
 echo "[policies] applying masking policy for iceberg.smoke.events.kind"
