@@ -1,0 +1,19 @@
+{
+  "service": "trino-odp",
+  "name": "allow-select-events",
+  "description": "Base access: admin and analyst may SELECT iceberg.smoke.events. Masking is layered on top by the mask policy.",
+  "policyType": 0,
+  "isEnabled": true,
+  "resources": {
+    "catalog": { "values": ["iceberg"], "isExcludes": false, "isRecursive": false },
+    "schema":  { "values": ["smoke"],   "isExcludes": false, "isRecursive": false },
+    "table":   { "values": ["events"],  "isExcludes": false, "isRecursive": false },
+    "column":  { "values": ["*"],       "isExcludes": false, "isRecursive": false }
+  },
+  "policyItems": [
+    {
+      "users": ["admin", "analyst"],
+      "accesses": [{ "type": "select", "isAllowed": true }]
+    }
+  ]
+}

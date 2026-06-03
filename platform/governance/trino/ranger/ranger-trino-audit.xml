@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Audit sink config. Disabled for the laptop subset (no Solr/HDFS). -->
+<configuration>
+  <property>
+    <name>xasecure.audit.is.enabled</name>
+    <value>false</value>
+  </property>
+</configuration>

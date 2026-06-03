@@ -1,0 +1,21 @@
+{
+  "service": "trino-odp",
+  "name": "mask-events-kind-for-analyst",
+  "description": "Masking policy: the `kind` column of iceberg.smoke.events is masked for the analyst user.",
+  "policyType": 1,
+  "isEnabled": true,
+  "isAuditEnabled": true,
+  "resources": {
+    "catalog": { "values": ["iceberg"], "isExcludes": false, "isRecursive": false },
+    "schema":  { "values": ["smoke"],   "isExcludes": false, "isRecursive": false },
+    "table":   { "values": ["events"],  "isExcludes": false, "isRecursive": false },
+    "column":  { "values": ["kind"],    "isExcludes": false, "isRecursive": false }
+  },
+  "dataMaskPolicyItems": [
+    {
+      "users": ["analyst"],
+      "accesses": [{ "type": "select", "isAllowed": true }],
+      "dataMaskInfo": { "dataMaskType": "MASK" }
+    }
+  ]
+}

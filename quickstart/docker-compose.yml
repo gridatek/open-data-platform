@@ -83,7 +83,7 @@ services:
 
   # ── Trino: SQL query engine over Iceberg (≈ CDW) ─────────────
   trino:
-    image: trinodb/trino:latest
+    image: trinodb/trino:479   # >= 466 ships the native Apache Ranger access control
     container_name: odp-trino
     depends_on:
       - iceberg-rest

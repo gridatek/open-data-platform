@@ -1,0 +1,89 @@
+name: governance-ci
+
+# Phase 1 proof: a Ranger policy masks a column in a Trino query.
+# Brings up the lakehouse + Ranger, seeds a table, loads the masking policy,
+# then asserts admin sees the real value while analyst sees it masked.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "quickstart/**"
+      - "platform/governance/**"
+      - ".github/workflows/governance-ci.yml"
+  pull_request:
+    paths:
+      - "quickstart/**"
+      - "platform/governance/**"
+      - ".github/workflows/governance-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  masking-proof:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quickstart
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create .env from example
+        run: cp .env.example .env
+
+      - name: Build and start lakehouse + governance
+        run: docker compose -f docker-compose.yml -f docker-compose.governance.yml up -d --build
+
+      - name: Wait for the Iceberg REST catalog
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8181/v1/config >/dev/null && { echo "REST up"; exit 0; }
+            echo "waiting for REST ($i)..."; sleep 5
+          done; exit 1
+
+      - name: Wait for Trino
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8080/v1/info >/dev/null && { echo "Trino up"; exit 0; }
+            echo "waiting for Trino ($i)..."; sleep 5
+          done; exit 1
+
+      - name: Wait for Ranger admin
+        run: |
+          for i in $(seq 1 90); do
+            curl -sf -u "admin:rangerR0cks!" \
+              http://localhost:6080/service/public/v2/api/service >/dev/null \
+              && { echo "Ranger up"; exit 0; }
+            echo "waiting for Ranger ($i)..."; sleep 10
+          done; exit 1
+
+      - name: Seed the demo table from Spark
+        run: docker compose exec -T spark spark-submit /home/iceberg/jobs/seed_lakehouse.py
+
+      - name: Load Ranger policies
+        run: bash ../platform/governance/load-policies.sh
+
+      - name: Wait for the Trino plugin to poll the policy
+        run: sleep 45
+
+      - name: Admin sees the real value
+        run: |
+          OUT=$(docker compose exec -T trino trino --user admin \
+            --execute "SELECT kind FROM iceberg.smoke.events WHERE id = 4" | tr -d '"[:space:]')
+          echo "admin sees: $OUT"
+          test "$OUT" = "purchase"
+
+      - name: Analyst sees the value masked
+        run: |
+          OUT=$(docker compose exec -T trino trino --user analyst \
+            --execute "SELECT kind FROM iceberg.smoke.events WHERE id = 4" | tr -d '"[:space:]')
+          echo "analyst sees: $OUT"
+          test "$OUT" != "purchase"
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.governance.yml logs --no-color
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.governance.yml down -v

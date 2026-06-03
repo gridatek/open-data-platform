@@ -1,0 +1,12 @@
+{
+  "name": "trino-odp",
+  "type": "trino",
+  "description": "Open Data Platform Trino service (Phase 0 lakehouse).",
+  "isEnabled": true,
+  "configs": {
+    "username": "admin",
+    "password": "admin",
+    "jdbc.driverClassName": "io.trino.jdbc.TrinoDriver",
+    "jdbc.url": "jdbc:trino://trino:8080"
+  }
+}

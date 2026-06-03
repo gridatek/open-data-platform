@@ -1,0 +1,84 @@
+# ───────────────────────────────────────────────────────────────
+# Phase 1 — the SDX clone: Apache Ranger (policies) + Apache Atlas (lineage)
+#
+# Overlay on top of the Phase 0 lakehouse. Run both files together:
+#
+#   docker compose \
+#     -f docker-compose.yml \
+#     -f docker-compose.governance.yml \
+#     up -d --build
+#
+# Then load the masking policy and prove it:
+#   ../platform/governance/load-policies.sh
+#
+#   Ranger admin : http://localhost:6080   (admin / rangerR0cks!)
+#   Atlas        : http://localhost:21000  (admin / admin)
+# ───────────────────────────────────────────────────────────────
+
+name: odp-quickstart
+
+services:
+  # ── Ranger backing database ──────────────────────────────────
+  ranger-db:
+    image: postgres:15
+    container_name: odp-ranger-db
+    environment:
+      POSTGRES_USER: rangeradmin
+      POSTGRES_PASSWORD: rangeradmin
+      POSTGRES_DB: ranger
+    volumes:
+      - ranger-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rangeradmin -d ranger"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - odp
+
+  # ── Ranger admin: policy server + UI (the SDX policy plane) ───
+  ranger-admin:
+    build:
+      context: ../platform/governance/ranger
+    image: odp/ranger-admin:2.4.0
+    container_name: odp-ranger-admin
+    depends_on:
+      ranger-db:
+        condition: service_healthy
+    environment:
+      RANGER_DB_HOST: ranger-db
+      RANGER_DB_PORT: "5432"
+      RANGER_DB_NAME: ranger
+      RANGER_DB_USER: rangeradmin
+      RANGER_DB_PASSWORD: rangeradmin
+      RANGER_ADMIN_PASSWORD: "rangerR0cks!"
+    ports:
+      - "6080:6080"
+    networks:
+      - odp
+
+  # ── Atlas: metadata catalog + lineage graph ──────────────────
+  atlas:
+    image: sburn/apache-atlas:latest   # community prebuilt; swap for an official build later
+    container_name: odp-atlas
+    command: >
+      /bin/sh -c "/opt/apache-atlas/bin/atlas_start.py; tail -f /opt/apache-atlas/logs/application.log"
+    ports:
+      - "21000:21000"
+    networks:
+      - odp
+
+  # ── Turn on Ranger access control in the base Trino ──────────
+  # No custom image needed: the Ranger plugin is built into Trino >= 466.
+  # We just mount the access-control config + ranger-*.xml into /etc/trino.
+  trino:
+    depends_on:
+      - ranger-admin
+    volumes:
+      - ../platform/governance/trino/etc/access-control.properties:/etc/trino/access-control.properties:ro
+      - ../platform/governance/trino/ranger/ranger-trino-security.xml:/etc/trino/ranger-trino-security.xml:ro
+      - ../platform/governance/trino/ranger/ranger-trino-audit.xml:/etc/trino/ranger-trino-audit.xml:ro
+      - ../platform/governance/trino/ranger/ranger-policymgr-ssl.xml:/etc/trino/ranger-policymgr-ssl.xml:ro
+
+volumes:
+  ranger-db-data:

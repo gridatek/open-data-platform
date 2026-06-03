@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Ranger Trino plugin: where to fetch policies and how often. -->
+<configuration>
+  <property>
+    <name>ranger.plugin.trino.service.name</name>
+    <value>trino-odp</value>
+  </property>
+  <property>
+    <name>ranger.plugin.trino.policy.rest.url</name>
+    <value>http://ranger-admin:6080</value>
+  </property>
+  <property>
+    <name>ranger.plugin.trino.policy.source.impl</name>
+    <value>org.apache.ranger.admin.client.RangerAdminRESTClient</value>
+  </property>
+  <property>
+    <name>ranger.plugin.trino.policy.rest.client.connection.timeoutMs</name>
+    <value>120000</value>
+  </property>
+  <property>
+    <name>ranger.plugin.trino.policy.pollIntervalMs</name>
+    <value>30000</value>
+  </property>
+  <property>
+    <name>ranger.plugin.trino.policy.cache.dir</name>
+    <value>/tmp/ranger/trino/policycache</value>
+  </property>
+</configuration>

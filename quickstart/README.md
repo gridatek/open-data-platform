@@ -83,3 +83,15 @@ quickstart/
 
 > ⚠️ The credentials here are **local-dev only**. `.env` is gitignored; never
 > reuse these values anywhere real.
+
+## Phase 1 — governance overlay (Ranger + Atlas)
+
+Add the SDX clone on top of the lakehouse to prove a Ranger policy masks a
+column in a Trino query:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.governance.yml up -d --build
+```
+
+See [`../platform/governance/README.md`](../platform/governance/README.md) for
+the full walkthrough and the masking proof.

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SSL to the Ranger admin. Disabled for the laptop subset (plain HTTP). -->
+<configuration>
+  <property>
+    <name>xasecure.policymgr.clientssl.keystore</name>
+    <value></value>
+  </property>
+  <property>
+    <name>xasecure.policymgr.clientssl.truststore</name>
+    <value></value>
+  </property>
+</configuration>
