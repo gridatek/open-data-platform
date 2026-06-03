@@ -23,7 +23,8 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*
 
 # Pull the JDBC driver Ranger uses to talk to Postgres.
-RUN curl -fsSL \
+RUN mkdir -p /usr/share/java; \
+    curl -fsSL \
       "https://jdbc.postgresql.org/download/postgresql-42.7.3.jar" \
       -o /usr/share/java/postgresql.jar
 

@@ -3,5 +3,3 @@
 *.tmp
 *.bak
 *.orig
-# downloaded subchart archives (helm dependency build)
-charts/*.tgz
