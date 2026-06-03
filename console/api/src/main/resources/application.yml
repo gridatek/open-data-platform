@@ -1,0 +1,33 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: open-data-platform-console
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+# Defaults target the quickstart on localhost; override via env in containers.
+odp:
+  catalog:
+    rest-url: ${ODP_CATALOG_REST_URL:http://localhost:8181}
+  ranger:
+    url: ${ODP_RANGER_URL:http://localhost:6080}
+    service-name: ${ODP_RANGER_SERVICE_NAME:trino-odp}
+    username: ${ODP_RANGER_USERNAME:admin}
+    password: ${ODP_RANGER_PASSWORD:rangerR0cks!}
+  services:
+    - name: minio
+      health: ${ODP_HEALTH_MINIO:http://localhost:9000/minio/health/live}
+    - name: iceberg-rest
+      health: ${ODP_HEALTH_CATALOG:http://localhost:8181/v1/config}
+    - name: trino
+      health: ${ODP_HEALTH_TRINO:http://localhost:8080/v1/info}
+    - name: ranger
+      health: ${ODP_HEALTH_RANGER:http://localhost:6080/login.jsp}
+    - name: atlas
+      health: ${ODP_HEALTH_ATLAS:http://localhost:21000/api/atlas/admin/version}
