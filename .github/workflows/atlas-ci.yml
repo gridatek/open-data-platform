@@ -1,0 +1,56 @@
+name: atlas-ci
+
+# Phase 1 (lineage half): bring up Atlas, register a lineage graph, and assert
+# the edge  events_source -> seed_lakehouse -> iceberg.smoke.events  is queryable.
+# Atlas (embedded HBase + Solr) is heavy and slow, so this runs on its own.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "platform/governance/atlas/**"
+      - "quickstart/docker-compose.governance.yml"
+      - ".github/workflows/atlas-ci.yml"
+  pull_request:
+    paths:
+      - "platform/governance/atlas/**"
+      - "quickstart/docker-compose.governance.yml"
+      - ".github/workflows/atlas-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  lineage-proof:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quickstart
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create .env from example
+        run: cp .env.example .env
+
+      - name: Start Atlas only
+        run: docker compose -f docker-compose.yml -f docker-compose.governance.yml up -d atlas
+
+      - name: Wait for Atlas REST (up to ~10 min)
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf -u admin:admin http://localhost:21000/api/atlas/admin/version >/dev/null; then
+              echo "Atlas is up"; exit 0
+            fi
+            echo "waiting for Atlas ($i)..."; sleep 10
+          done
+          echo "Atlas did not become ready in time"; exit 1
+
+      - name: Register and verify lineage
+        run: bash ../platform/governance/atlas/register-lineage.sh
+
+      - name: Dump Atlas logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.governance.yml logs --no-color atlas
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.governance.yml down -v

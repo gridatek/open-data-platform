@@ -65,6 +65,12 @@ services:
       /bin/sh -c "/opt/apache-atlas/bin/atlas_start.py; tail -f /opt/apache-atlas/logs/application.log"
     ports:
       - "21000:21000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -u admin:admin http://localhost:21000/api/atlas/admin/version || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+      start_period: 180s   # embedded HBase + Solr take a while to come up
     networks:
       - odp
 

@@ -19,8 +19,11 @@ governance/
 ├── policies/                   # Ranger REST payloads
 │   ├── trino-service.json      #   registers the "trino-odp" service
 │   ├── trino-access.json       #   admin + analyst may SELECT events
-│   └── trino-events-mask.json  #   mask `kind` for analyst  ← the proof
-└── load-policies.sh            # POST the service + policies to Ranger
+│   └── trino-events-mask.json  #   mask `kind` for analyst  ← the masking proof
+├── load-policies.sh            # POST the service + policies to Ranger
+└── atlas/                      # lineage half of the SDX clone
+    ├── entities/lineage-seed.json   # source -> process -> table graph
+    └── register-lineage.sh          # POST entities + verify the lineage edge
 ```
 
 ## Run it (laptop subset)
@@ -62,6 +65,30 @@ If `kind` is real for `admin` and masked for `analyst`, Phase 1 is green: one
 governed table, one Ranger policy, enforced inside the engine. CI runs exactly
 this in `.github/workflows/governance-ci.yml`.
 
+## Lineage — the Atlas half
+
+Atlas captures lineage from `Process` entities: each process names its input and
+output `DataSet`s, and Atlas stitches those into a graph. We register a minimal
+graph for the seed job and read it back:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.governance.yml up -d atlas
+../platform/governance/atlas/register-lineage.sh
+```
+
+```
+events_source ──[seed_lakehouse]──▶ iceberg.smoke.events
+```
+
+The script posts the entities, resolves the table's guid, queries
+`/api/atlas/v2/lineage/{guid}?direction=INPUT`, and asserts the upstream
+`events_source` shows up. Open http://localhost:21000 to see the graph in the
+Atlas UI. CI runs this in `.github/workflows/atlas-ci.yml`.
+
+> This registers lineage **explicitly** via REST — the honest stub. Automatic
+> capture (a Spark/Trino hook emitting lineage as jobs run) is the real goal and
+> a later step; the entity/graph model proven here is the same one a hook feeds.
+
 ## Versions (pinned)
 
 - **Ranger 2.8.0** — admin installed from the prebuilt tarball at
@@ -89,7 +116,9 @@ Written to iterate against CI, not validated locally:
   absolute path. We mount the `ranger-*.xml` into `/etc/trino`; if Trino
   doesn't search there, they may need to move onto the plugin classpath. This
   is the most likely first CI failure.
-- **Atlas** uses a community image as a placeholder and is wired for lineage
-  later; it isn't part of the masking proof yet.
+- **Atlas** uses a community image (`sburn/apache-atlas`) running embedded
+  HBase + Solr — slow to boot (minutes) and memory-hungry; swap for an official
+  build later. Lineage is registered **explicitly** via REST, not auto-captured
+  from running jobs yet.
 - **Default-deny:** Ranger denies unless a policy allows, hence the explicit
   `trino-access.json`. Catalog/schema-level grants may still need widening.

@@ -1,0 +1,33 @@
+{
+  "entities": [
+    {
+      "typeName": "DataSet",
+      "guid": "-1",
+      "attributes": {
+        "qualifiedName": "events_source@odp",
+        "name": "events_source",
+        "description": "Upstream source of the demo events (the Spark seed input)."
+      }
+    },
+    {
+      "typeName": "DataSet",
+      "guid": "-2",
+      "attributes": {
+        "qualifiedName": "iceberg.smoke.events@odp",
+        "name": "iceberg.smoke.events",
+        "description": "Iceberg table in the smoke namespace, written by the seed job."
+      }
+    },
+    {
+      "typeName": "Process",
+      "guid": "-3",
+      "attributes": {
+        "qualifiedName": "seed_lakehouse@odp",
+        "name": "seed_lakehouse",
+        "description": "The PySpark seed job: events_source -> iceberg.smoke.events.",
+        "inputs": [{ "guid": "-1", "typeName": "DataSet" }],
+        "outputs": [{ "guid": "-2", "typeName": "DataSet" }]
+      }
+    }
+  ]
+}
