@@ -59,10 +59,12 @@ services:
 
   # ── Atlas: metadata catalog + lineage graph ──────────────────
   atlas:
-    image: sburn/apache-atlas:latest   # community prebuilt; swap for an official build later
+    # Community prebuilt (swap for an official build later). Pinned by digest:
+    # the ':latest' tag silently moved Atlas from /opt/apache-atlas to /apache-atlas,
+    # which broke the old start command. The image's own default CMD starts Atlas
+    # and tails its log from the correct path, so we no longer override it.
+    image: sburn/apache-atlas:latest@sha256:9192ed82f33072321590a0cd99be7d04e2afe74c35987dc109160a4f3bf00af7
     container_name: odp-atlas
-    command: >
-      /bin/sh -c "/opt/apache-atlas/bin/atlas_start.py; tail -f /opt/apache-atlas/logs/application.log"
     ports:
       - "21000:21000"
     healthcheck:
