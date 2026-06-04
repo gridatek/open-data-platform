@@ -16,8 +16,16 @@ trino:
 atlas:
   enabled: false      # ~3Gi, too heavy for a CI runner
 ranger:
-  enabled: false      # needs the locally-built admin image
+  enabled: false      # default-on in the umbrella; this job is lakehouse-only
 superset:
   enabled: false
 airflow:
+  enabled: false
+# These default on in the umbrella now (images published to GHCR), but the
+# lakehouse smoke doesn't need them and their images aren't loaded in this job.
+console:
+  enabled: false
+console-web:
+  enabled: false
+jupyterhub:
   enabled: false

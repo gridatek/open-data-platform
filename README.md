@@ -168,9 +168,11 @@ subchart (`iceberg-rest`, `atlas`, `ranger`, `kafka`, `nifi`, `mlflow`, `jupyter
 `console`, `console-web`, `opdb`). `helm-ci` lints + templates it; **`kind-ci` deploys it on
 a real (kind) cluster** — one job runs a Trino write/read round-trip on the lakehouse, another
 stands up Ranger + the Trino plugin and **proves a column-mask policy hides a value from the
-analyst** (the same masking proof `governance-ci` runs on docker-compose). Locally-built
-images (`ranger`, `console`, `console-web`, `jupyterhub`) default off; `atlas` is heavy
-(~3Gi) and can be disabled. See [`platform/umbrella`](platform/umbrella/).
+analyst** (the same masking proof `governance-ci` runs on docker-compose). `ranger`,
+`console`, `console-web` and `jupyterhub` are published to GHCR
+([`publish-images.yml`](.github/workflows/publish-images.yml)) and default **on** (make the
+packages public to pull); the optional services (`kafka`/`nifi`/`mlflow`/`opdb` + upstream
+Superset/Airflow) and the heavy `atlas` can be toggled. See [`platform/umbrella`](platform/umbrella/).
 
 The **Operational DB** (HBase + Phoenix) runs standalone as its own overlay, proven by a
 Phoenix SQL round-trip in `opdb-ci`, and ships as the `opdb` subchart.
