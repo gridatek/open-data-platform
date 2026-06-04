@@ -134,22 +134,29 @@ open-data-platform/
 
 ## 5. Phased build roadmap
 
-Build the platform incrementally; each phase is independently usable and demoable.
+Build the platform incrementally; each phase is independently usable and demoable. The
+**docker-compose laptop subset of every phase below is implemented and proven in CI** — each
+row maps to a workflow in [`.github/workflows`](.github/workflows/) that brings the stack up
+and asserts the behaviour end to end. The full Kubernetes/Helm path and a couple of services
+are still in progress (see notes under the table).
 
-- **Phase 0 — Lakehouse core.** MinIO + Iceberg + a REST catalog + Trino + Spark.
-  One bucket, one Iceberg table, queryable from Trino and writable from Spark. This is the
-  spine everything else hangs off.
-- **Phase 1 — The SDX clone (the differentiator).** Add Ranger for table/column policies
-  and Atlas for lineage over the Phase 0 lakehouse. Prove that a Ranger policy actually
-  masks a column in a Trino query. This is what makes it "Cloudera-like".
-- **Phase 2 — Console MVP (read-only).** Angular/Spring Boot dashboard: list services and
-  health from the K8s API, browse the Iceberg catalog, view Ranger policies. No writes yet.
-- **Phase 3 — Breadth of data services.** Add Airflow, NiFi + Kafka, Superset, JupyterHub +
-  MLflow as Helm charts, each wired to the shared catalog + governance layer.
-- **Phase 4 — Console as control plane.** Console can now provision/scale services and edit
-  Ranger policies via the API — the real "Cloudera Manager" experience.
-- **Phase 5 — Labs + packaging.** Umbrella Helm chart, one-command bootstrap, and the full
-  lab curriculum with cert-alignment callouts.
+| Phase | What it adds | Status | Proven by |
+|-------|--------------|--------|-----------|
+| **0 — Lakehouse core** | MinIO + Iceberg + a REST catalog + Trino + Spark: one bucket, one Iceberg table, queryable from Trino and writable from Spark. The spine everything hangs off. | ✅ Done | `quickstart-ci` |
+| **1 — The SDX clone** (the differentiator) | Ranger table/column policies + Atlas lineage over Phase 0. A Ranger policy genuinely masks a column in a Trino query (`purchase` → `xxxxxxxx`); Atlas records the lineage edge. This is what makes it "Cloudera-like". | ✅ Done | `governance-ci`, `atlas-ci` |
+| **2 — Console MVP (read-only)** | Angular/Spring Boot dashboard: service health, browse the Iceberg catalog, view Ranger policies. No writes. | ✅ Done | `console-ci` |
+| **3 — Breadth of data services** | Airflow, NiFi + Kafka, Superset, MLflow — each wired to the shared catalog + governance layer. | ✅ Done | `services-ci` |
+| **4 — Console as control plane** | Console restarts/scales services and creates/edits/toggles Ranger policies via the API — the real "Cloudera Manager" move. Proven by flipping the masking policy **through the console** and watching the analyst's query go clear, then masked again. | ✅ Done | `console-control-ci` |
+| **5 — Labs + packaging** | One-command bootstrap, umbrella Helm chart, and the full lab curriculum (5 tracks, 17 labs) with cert-alignment callouts. | 🟡 Mostly done | `helm-ci` |
+
+**Still in progress**
+
+- **Kubernetes/Helm path.** The umbrella chart lints and template-renders in CI, but currently
+  only vendors the upstream MinIO/Trino/Superset/Airflow charts. The SDX subcharts (REST
+  catalog, Ranger, Atlas) and the streaming/ML services have no upstream chart yet and are
+  scaffolded as local subcharts, disabled by default — so today the K8s deploy is partial and
+  the docker-compose subset is the fully working path.
+- **Operational DB (HBase + Phoenix).** Still a scaffold; not yet wired up or tested.
 
 ---
 
@@ -188,9 +195,15 @@ This is the part that makes the project portfolio-grade and genuinely yours.
 
 ---
 
-## 8. Suggested next step
+## 8. Where it stands / what's next
 
-Start at **Phase 0** as a single `quickstart/docker-compose.yml` (MinIO + Iceberg REST
-catalog + Trino + a Spark job) so contributors get a working lakehouse in one command,
-then graduate the same components into Helm charts for the K8s path. Lock the SDX clone
-(Phase 1) early — it's the thing that distinguishes this from every other lakehouse demo.
+Phases 0–4 run today as the docker-compose laptop subset and are proven end to end in CI
+(see the table in §5). The SDX clone — the thing that distinguishes this from every other
+lakehouse demo — works: a Ranger policy masks a real Trino query, the console toggles that
+policy live, and Atlas records the lineage.
+
+The open work is **graduating the same components onto Kubernetes**: turn the SDX layer
+(REST catalog, Ranger, Atlas) and the streaming/ML services into local subcharts under the
+umbrella chart and enable them by default, then wire the Operational DB (HBase + Phoenix).
+Until then, `quickstart/` (docker-compose) is the fully working path; `platform/umbrella/`
+is the Helm path under construction.
