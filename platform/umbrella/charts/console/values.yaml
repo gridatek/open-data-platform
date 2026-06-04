@@ -1,9 +1,10 @@
 # Console API — values. K8s port of the docker-compose `console-api` service.
 #
-# IMPORTANT: no published image — build & load it before enabling:
-#   docker build -t odp/console-api:latest console/api
-#   kind load docker-image odp/console-api:latest      # or push to a registry
-# That's why the umbrella leaves console.enabled=false by default.
+# image defaults to the GHCR image published by publish-images.yml (make the
+# package public, or add an imagePullSecret, before pulling). The umbrella leaves
+# console.enabled=false by default. To build + use locally instead:
+#   docker build -t ghcr.io/gridatek/console-api:latest console/api
+#   kind load docker-image ghcr.io/gridatek/console-api:latest
 #
 # The API only makes HTTP calls (health/catalog/ranger), so it needs no K8s RBAC.
 enabled: true
@@ -11,7 +12,7 @@ enabled: true
 replicaCount: 1
 
 image:
-  repository: odp/console-api
+  repository: ghcr.io/gridatek/console-api
   tag: "latest"
   pullPolicy: IfNotPresent
 

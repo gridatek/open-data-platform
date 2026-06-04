@@ -1,14 +1,13 @@
 # Apache Ranger — values. K8s port of the docker-compose ranger-db + ranger-admin.
 #
-# IMPORTANT: Apache publishes no Ranger *admin* image, so admin.image is built
-# locally from platform/governance/ranger and must be present in the cluster
-# before this subchart can run, e.g.:
+# Apache publishes no Ranger *admin* image, so it's built from
+# platform/governance/ranger and published to GHCR by .github/workflows/publish-
+# images.yml. admin.image defaults to that published image; make the package
+# public (or add an imagePullSecret) before pulling. The umbrella still leaves
+# ranger.enabled=false by default. To build + use locally instead:
 #
-#   docker build -t odp/ranger-admin:2.4.0 platform/governance/ranger
-#   kind load docker-image odp/ranger-admin:2.4.0      # or push to your registry
-#
-# That's why the umbrella leaves ranger.enabled=false by default — flip it on
-# once the image is loaded.
+#   docker build -t ghcr.io/gridatek/ranger-admin:2.4.0 platform/governance/ranger
+#   kind load docker-image ghcr.io/gridatek/ranger-admin:2.4.0
 
 # Set by the umbrella via `condition: ranger.enabled`.
 enabled: true
@@ -16,7 +15,7 @@ enabled: true
 # ── Ranger admin: policy server + UI ─────────────────────────
 admin:
   image:
-    repository: odp/ranger-admin
+    repository: ghcr.io/gridatek/ranger-admin
     tag: "2.4.0"               # the tag the compose build produces
     pullPolicy: IfNotPresent
   # Password for the built-in `admin` user (and tagsync/usersync/keyadmin).

@@ -1,9 +1,10 @@
 # JupyterHub — values. K8s port of the docker-compose `jupyterhub` service.
 #
-# IMPORTANT: no published image — build & load it before enabling:
-#   docker build -t odp/jupyterhub:latest platform/ml/jupyterhub
-#   kind load docker-image odp/jupyterhub:latest      # or push to a registry
-# That's why the umbrella leaves jupyterhub.enabled=false by default.
+# image defaults to the GHCR image published by publish-images.yml (make the
+# package public, or add an imagePullSecret, before pulling). Default off. To
+# build + use locally instead:
+#   docker build -t ghcr.io/gridatek/jupyterhub:latest platform/ml/jupyterhub
+#   kind load docker-image ghcr.io/gridatek/jupyterhub:latest
 #
 # Single-node: notebook servers spawn as local processes in the hub pod
 # (SimpleLocalProcessSpawner). A real multi-tenant deploy would use KubeSpawner.
@@ -12,7 +13,7 @@ enabled: true
 replicaCount: 1
 
 image:
-  repository: odp/jupyterhub
+  repository: ghcr.io/gridatek/jupyterhub
   tag: "latest"
   pullPolicy: IfNotPresent
 
