@@ -72,10 +72,12 @@ jobs:
             --execute "SELECT kind FROM iceberg.smoke.events WHERE id = 4" | tr -d "\"[:space:]"' >> /tmp/kind.sh
           chmod +x /tmp/kind.sh
 
-      - name: Masking is ON (sanity) — analyst should NOT see 'purchase'
+      - name: Masking is ON (sanity) — analyst sees the masked value
         run: |
           OUT=$(/tmp/kind.sh); echo "analyst sees: $OUT"
-          test "$OUT" != "purchase"
+          # Assert the exact masked value, not just `!= purchase`: a denied query
+          # returns empty, which would pass `!=` and hide a broken masking setup.
+          test "$OUT" = "xxxxxxxx"
 
       - name: Disable the masking policy THROUGH THE CONSOLE
         run: |
@@ -98,10 +100,12 @@ jobs:
             -H 'Content-Type: application/json' -d '{"enabled":true}'
           sleep 45
 
-      - name: Masking is ON again — analyst no longer sees 'purchase'
+      - name: Masking is ON again — analyst sees the masked value
         run: |
           OUT=$(/tmp/kind.sh); echo "analyst sees: $OUT"
-          test "$OUT" != "purchase"
+          # Exact masked value again (see note above) — guards against the toggle
+          # leaving analyst denied rather than genuinely re-masked.
+          test "$OUT" = "xxxxxxxx"
 
       - name: Dump logs on failure
         if: failure()
