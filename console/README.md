@@ -2,8 +2,9 @@
 
 The management console: a **Spring Boot API** + **Angular/Tailwind UI** over the
 platform's backing services. Phase 2 was the **read-only MVP**; Phase 4 makes it
-a **control plane** — it can now edit governance (enable/disable Ranger policies).
-Service provisioning/scaling (the K8s side) is stubbed at 501 until Phase 4b.
+a **control plane** — it can edit governance (enable/disable Ranger policies) and,
+on Kubernetes, restart/scale services via the API (an RBAC'd ServiceAccount; the
+docker-compose subset returns 501 since there's no cluster).
 
 ```
 console/
