@@ -1,0 +1,23 @@
+# Overrides for kind-ci — bring up just the lakehouse subset, sized to fit a
+# GitHub-hosted runner (~7 GB / 2 CPU). The SDX policy/lineage + streaming/ML
+# subcharts are left off here; this smoke test proves Trino can read/write the
+# Iceberg REST catalog backed by MinIO on a real cluster.
+trino:
+  server:
+    workers: 0
+    # No separate worker pod — let the coordinator run query tasks.
+    coordinatorExtraConfig: |
+      node-scheduler.include-coordinator=true
+  coordinator:
+    jvm:
+      # The chart defaults to an 8G heap, which won't fit a CI runner.
+      maxHeapSize: "2G"
+
+atlas:
+  enabled: false      # ~3Gi, too heavy for a CI runner
+ranger:
+  enabled: false      # needs the locally-built admin image
+superset:
+  enabled: false
+airflow:
+  enabled: false

@@ -1,0 +1,69 @@
+name: kind-ci
+
+# Phase 5: deploy the umbrella's lakehouse subset onto a real (kind) Kubernetes
+# cluster and prove Trino can write+read the Iceberg REST catalog backed by
+# MinIO — the K8s counterpart of quickstart-ci. Catches things `helm lint` /
+# `helm template` can't, e.g. unschedulable resource requests.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "platform/umbrella/**"
+      - ".github/workflows/kind-ci.yml"
+  pull_request:
+    paths:
+      - "platform/umbrella/**"
+      - ".github/workflows/kind-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  lakehouse-on-kind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: odp
+
+      - name: Add chart repos
+        run: |
+          helm repo add minio https://charts.min.io/
+          helm repo add trino https://trinodb.github.io/charts
+          helm repo add superset https://apache.github.io/superset
+          helm repo add apache-airflow https://airflow.apache.org
+          helm repo update
+
+      - name: Build chart dependencies
+        run: helm dependency build platform/umbrella
+
+      - name: Install the lakehouse subset
+        run: |
+          helm install odp platform/umbrella -n odp --create-namespace \
+            -f platform/umbrella/ci/kind-values.yaml \
+            --wait --timeout 8m
+
+      - name: Trino write/read round-trip (Iceberg REST + MinIO)
+        run: |
+          COORD=$(kubectl -n odp get pod -l app.kubernetes.io/component=coordinator -o name | head -1)
+          kubectl -n odp exec -i "$COORD" -- trino --execute "
+            CREATE SCHEMA IF NOT EXISTS iceberg.kind_smoke;
+            CREATE TABLE IF NOT EXISTS iceberg.kind_smoke.events (id int, kind varchar);
+            INSERT INTO iceberg.kind_smoke.events VALUES (1,'purchase'),(2,'refund');
+          "
+          OUT=$(kubectl -n odp exec -i "$COORD" -- trino --execute \
+            "SELECT kind FROM iceberg.kind_smoke.events WHERE id = 1" | tr -d '"[:space:]')
+          echo "trino sees: $OUT"
+          test "$OUT" = "purchase"
+
+      - name: Dump diagnostics on failure
+        if: failure()
+        run: |
+          kubectl -n odp get pods -o wide || true
+          kubectl -n odp describe pods || true
+          kubectl -n odp logs -l app.kubernetes.io/name=trino --tail=120 --all-containers || true
+          kubectl -n odp logs -l app.kubernetes.io/name=iceberg-rest --tail=120 || true
+          kubectl -n odp logs -l app=minio --tail=120 || true
