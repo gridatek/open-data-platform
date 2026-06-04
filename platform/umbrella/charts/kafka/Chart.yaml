@@ -1,0 +1,8 @@
+apiVersion: v2
+name: kafka
+description: >-
+  Apache Kafka — single-node KRaft broker for the streaming tier (≈ CDF).
+  Ported from the docker-compose `kafka` service.
+type: application
+version: 0.1.0
+appVersion: "3.8.1"

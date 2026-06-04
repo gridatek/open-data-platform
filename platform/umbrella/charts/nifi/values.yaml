@@ -1,0 +1,27 @@
+# Apache NiFi — values. K8s port of the docker-compose `nifi` service.
+# Plain HTTP + anonymous, single node — laptop/dev only, not for anything real.
+enabled: true
+
+replicaCount: 1
+
+image:
+  repository: apache/nifi
+  tag: "1.28.1"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+# NiFi is slow to start; the startupProbe gates liveness for up to
+# periodSeconds * failureThreshold.
+startup:
+  periodSeconds: 10
+  failureThreshold: 60
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 1Gi
+  limits:
+    memory: 2Gi

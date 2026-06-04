@@ -1,0 +1,9 @@
+apiVersion: v2
+name: mlflow
+description: >-
+  MLflow tracking server (≈ Cloudera AI / CML). SQLite metadata, artifacts in
+  MinIO (s3://mlflow) via --serve-artifacts. Ported from the docker-compose
+  `mlflow` service (the `mlflow` bucket is created by the MinIO subchart).
+type: application
+version: 0.1.0
+appVersion: "2.17.2"

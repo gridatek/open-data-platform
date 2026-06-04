@@ -97,14 +97,26 @@ ranger:
     password: rangeradmin
     name: ranger
 
-# ── Not yet wired: need local subcharts under ./charts ───────
-# These mirror the docker-compose services; porting each to a chart is the
-# remaining Phase 5 work (Iceberg REST catalog, Atlas, Ranger above are done).
+# ── Streaming + ML tier (local subcharts) ───────────────────
+# Public images, so they "just work" — but default OFF to keep the base install
+# lean (like superset/airflow). Enable with --set <name>.enabled=true. Stable
+# Service names via fullnameOverride (kafka clients rely on `kafka:9092`).
 kafka:
-  enabled: false   # streaming
+  enabled: false
+  fullnameOverride: kafka
 nifi:
-  enabled: false   # flow authoring
+  enabled: false
+  fullnameOverride: nifi
 mlflow:
-  enabled: false   # experiment tracking
+  enabled: false
+  fullnameOverride: mlflow
+  s3:
+    endpoint: http://minio:9000
+    region: us-east-1
+    bucket: mlflow
+    accessKey: admin
+    secretKey: password
+
+# ── Not yet wired: needs a local subchart under ./charts ─────
 console:
   enabled: false   # the control-plane API + web

@@ -1,0 +1,8 @@
+apiVersion: v2
+name: nifi
+description: >-
+  Apache NiFi — flow authoring for the streaming tier (≈ CDF). Plain HTTP,
+  anonymous access, single node. Ported from the docker-compose `nifi` service.
+type: application
+version: 0.1.0
+appVersion: "1.28.1"

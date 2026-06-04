@@ -24,7 +24,9 @@ local subcharts under `charts/`:
 | `iceberg-rest`  | ✅ done   | The SDX catalog spine. Trino's `iceberg` catalog is wired to it via `additionalCatalogs`; MinIO is pinned to a stable Service name so the catalog resolves it. |
 | `atlas`         | ✅ done   | SDX lineage. Single container (embedded HBase + Solr), pinned by digest; `startupProbe` tolerates the slow boot. Heavy (~3Gi) — `--set atlas.enabled=false` to skip. |
 | `ranger`        | ✅ done¹  | Policy server + UI **and** its Postgres metadata store (admin Deployment + db Deployment/Service/PVC). Stable Service names `ranger-admin` / `ranger-db`. |
-| `kafka` / `nifi` / `mlflow` | ⬜ todo | Streaming + experiment tracking. |
+| `kafka`         | ✅ done   | Single-node KRaft broker; advertised listener uses the stable `kafka` Service name. Default off. |
+| `nifi`          | ✅ done   | Flow authoring, plain HTTP/anonymous; `startupProbe` on `/nifi`. Default off. |
+| `mlflow`        | ✅ done   | Tracking server; SQLite metadata, artifacts in the MinIO `mlflow` bucket. Default off. |
 
 ¹ Apache publishes no Ranger *admin* image, so it's built from
 `platform/governance/ranger`. **Build and load it before enabling** the
