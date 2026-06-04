@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ranger.admin.fullname" . }}
+  labels:
+    {{- include "ranger.labels" . | nindent 4 }}
+    {{- include "ranger.admin.selectorLabels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ranger.admin.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ranger.admin.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: ranger-admin
+          image: "{{ .Values.admin.image.repository }}:{{ .Values.admin.image.tag }}"
+          imagePullPolicy: {{ .Values.admin.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 6080
+          env:
+            # The entrypoint waits for the DB, renders install.properties, runs
+            # setup.sh (schema), then starts the admin. DB host is the in-cluster
+            # Postgres Service templated below so it always matches.
+            - name: RANGER_DB_HOST
+              value: {{ include "ranger.db.fullname" . | quote }}
+            - name: RANGER_DB_PORT
+              value: {{ .Values.db.service.port | quote }}
+            - name: RANGER_DB_NAME
+              value: {{ .Values.db.name | quote }}
+            - name: RANGER_DB_USER
+              value: {{ .Values.db.user | quote }}
+            - name: RANGER_DB_PASSWORD
+              value: {{ .Values.db.password | quote }}
+            - name: RANGER_ADMIN_PASSWORD
+              value: {{ .Values.admin.password | quote }}
+          # Schema setup + JVM/Tomcat start is slow; gate liveness behind startup.
+          startupProbe:
+            httpGet:
+              path: /login.jsp
+              port: http
+            periodSeconds: {{ .Values.admin.startup.periodSeconds }}
+            failureThreshold: {{ .Values.admin.startup.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /login.jsp
+              port: http
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /login.jsp
+              port: http
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.admin.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ranger.admin.fullname" . }}
+  labels:
+    {{- include "ranger.labels" . | nindent 4 }}
+    {{- include "ranger.admin.selectorLabels" . | nindent 4 }}
+spec:
+  type: {{ .Values.admin.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.admin.service.port }}
+      targetPort: http
+  selector:
+    {{- include "ranger.admin.selectorLabels" . | nindent 4 }}

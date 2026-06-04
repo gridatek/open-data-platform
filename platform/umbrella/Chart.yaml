@@ -21,6 +21,10 @@ dependencies:
   - name: atlas
     version: "0.1.0"
     condition: atlas.enabled
+  # Local subchart (charts/ranger) — the SDX policy server + its Postgres.
+  - name: ranger
+    version: "0.1.0"
+    condition: ranger.enabled
   - name: minio
     version: "5.4.0"
     repository: https://charts.min.io/
