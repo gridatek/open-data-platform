@@ -25,6 +25,16 @@ dependencies:
   - name: ranger
     version: "0.1.0"
     condition: ranger.enabled
+  # Local subcharts (charts/{kafka,nifi,mlflow}) — streaming + ML tier.
+  - name: kafka
+    version: "0.1.0"
+    condition: kafka.enabled
+  - name: nifi
+    version: "0.1.0"
+    condition: nifi.enabled
+  - name: mlflow
+    version: "0.1.0"
+    condition: mlflow.enabled
   - name: minio
     version: "5.4.0"
     repository: https://charts.min.io/

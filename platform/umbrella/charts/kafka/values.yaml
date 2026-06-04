@@ -1,0 +1,28 @@
+# Apache Kafka — single-node KRaft. K8s port of the docker-compose `kafka` service.
+# Advertised listeners point at this chart's own Service name, so set
+# fullnameOverride: kafka in the umbrella to keep `kafka:9092` working.
+enabled: true
+
+replicaCount: 1
+
+image:
+  repository: apache/kafka
+  tag: "3.8.1"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  clientPort: 9092
+  controllerPort: 9093
+
+persistence:
+  enabled: false        # dev broker — ephemeral by default
+  size: 5Gi
+  # storageClass: ""
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    memory: 1Gi

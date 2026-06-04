@@ -1,0 +1,39 @@
+# MLflow tracking server — values. K8s port of the docker-compose `mlflow` service.
+# Artifacts live in MinIO; its S3 creds must match the MinIO root user/password
+# in the umbrella values. The `mlflow` bucket is created by the MinIO subchart.
+enabled: true
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/mlflow/mlflow
+  tag: "v2.17.2"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 5000
+
+# Object storage for run artifacts.
+s3:
+  endpoint: http://minio:9000
+  region: us-east-1
+  bucket: mlflow
+  accessKey: admin
+  secretKey: password
+
+persistence:
+  enabled: false        # SQLite metadata DB — ephemeral by default
+  size: 2Gi
+  # storageClass: ""
+
+startup:
+  periodSeconds: 10
+  failureThreshold: 30
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 512Mi
