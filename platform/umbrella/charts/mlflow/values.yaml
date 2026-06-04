@@ -6,8 +6,8 @@ enabled: true
 replicaCount: 1
 
 image:
-  repository: ghcr.io/mlflow/mlflow
-  tag: "v2.17.2"
+  repository: ghcr.io/gridatek/mlflow    # mlflow + boto3 baked in (publish-images.yml)
+  tag: "latest"
   pullPolicy: IfNotPresent
 
 service:

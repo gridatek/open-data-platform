@@ -7,6 +7,7 @@ Phase 0 `spark-iceberg` image also ships a single Jupyter on :8888.)
 ```
 ml/
 ├── log-run.sh      # log a run to MLflow via REST and read it back (the proof)
+├── mlflow/         # MLflow image: boto3 baked in (Dockerfile → GHCR)
 └── jupyterhub/     # multi-user notebook hub (Dockerfile + config + smoke)
 ```
 
@@ -27,9 +28,10 @@ in `.github/workflows/services-ci.yml`.
 
 ## ⚠️ Rough edges
 
-- `boto3` is `pip install`ed at container start (no custom image yet).
-- SQLite backend store is single-process / laptop-only; real deployments use
-  Postgres. Artifacts in MinIO are the production-shaped part.
+- `boto3` is now **baked into a custom image** (`mlflow/Dockerfile`, published to
+  GHCR) — no cold-start `pip install`.
+- SQLite backend store is still single-process / laptop-only; real deployments
+  use Postgres. Artifacts in MinIO are the production-shaped part.
 - The proof logs metadata via REST; it doesn't yet upload an artifact through
   the MinIO path. Logging a model from a notebook (`mlflow.log_artifact`) is the
   next step.

@@ -17,6 +17,8 @@ on:
       - "console/api/**"
       - "console/web/**"
       - "platform/ml/jupyterhub/**"
+      - "platform/viz/superset/**"
+      - "platform/ml/mlflow/**"
       - ".github/workflows/publish-images.yml"
   workflow_dispatch:
 
@@ -42,6 +44,12 @@ jobs:
             version: ""
           - name: jupyterhub
             context: platform/ml/jupyterhub
+            version: ""
+          - name: superset
+            context: platform/viz/superset
+            version: ""
+          - name: mlflow
+            context: platform/ml/mlflow
             version: ""
     steps:
       - uses: actions/checkout@v4

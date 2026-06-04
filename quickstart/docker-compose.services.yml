@@ -17,7 +17,9 @@ name: odp-quickstart
 services:
   # ── Superset: BI over the lakehouse via Trino (≈ CDW / Data Viz) ──
   superset:
-    image: apache/superset:4.1.1
+    build:
+      context: ../platform/viz/superset
+    image: ghcr.io/gridatek/superset:latest   # apache/superset + the Trino dialect
     container_name: odp-superset
     depends_on:
       - trino
@@ -29,12 +31,11 @@ services:
       - superset-home:/app/superset_home
     ports:
       - "8088:8088"
-    # Install the Trino dialect, init the metadata DB + admin, then serve.
+    # Trino dialect is baked into the image; init the metadata DB + admin, then serve.
     command:
       - /bin/sh
       - -c
       - |
-        pip install --no-cache-dir 'trino>=0.330' &&
         superset db upgrade &&
         superset fab create-admin --username admin --firstname Admin \
           --lastname User --email admin@odp.local --password admin || true &&
@@ -92,7 +93,9 @@ services:
   # ── MLflow tracking server (≈ Cloudera AI / CML) ─────────────
   # Metadata in SQLite; artifacts in MinIO (s3://mlflow) via --serve-artifacts.
   mlflow:
-    image: ghcr.io/mlflow/mlflow:v2.17.2
+    build:
+      context: ../platform/ml/mlflow
+    image: ghcr.io/gridatek/mlflow:latest   # mlflow + boto3 baked in
     container_name: odp-mlflow
     depends_on:
       - mlflow-init
@@ -109,7 +112,6 @@ services:
       - /bin/sh
       - -c
       - |
-        pip install --no-cache-dir boto3 &&
         mlflow server --host 0.0.0.0 --port 5000 \
           --backend-store-uri sqlite:////mlflow/mlflow.db \
           --artifacts-destination s3://mlflow/ --serve-artifacts
