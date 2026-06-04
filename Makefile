@@ -5,12 +5,14 @@ COMPOSE := docker compose --project-directory quickstart \
   -f quickstart/docker-compose.yml \
   -f quickstart/docker-compose.governance.yml \
   -f quickstart/docker-compose.services.yml \
-  -f quickstart/docker-compose.console.yml
+  -f quickstart/docker-compose.console.yml \
+  -f quickstart/docker-compose.opdb.yml \
+  -f quickstart/docker-compose.jupyterhub.yml
 
 CORE := docker compose --project-directory quickstart -f quickstart/docker-compose.yml
 
 .DEFAULT_GOAL := help
-.PHONY: help env core all governance services console seed smoke down ps logs
+.PHONY: help env core all governance services console opdb jupyterhub seed down ps logs
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -40,6 +42,14 @@ console: env ## Lakehouse + governance + the console control plane
 	  -f quickstart/docker-compose.yml \
 	  -f quickstart/docker-compose.governance.yml \
 	  -f quickstart/docker-compose.console.yml up -d --build
+
+opdb: env ## Operational DB — HBase + Phoenix (standalone)
+	docker compose --project-directory quickstart \
+	  -f quickstart/docker-compose.opdb.yml up -d
+
+jupyterhub: env ## JupyterHub — multi-user notebooks (standalone)
+	docker compose --project-directory quickstart \
+	  -f quickstart/docker-compose.jupyterhub.yml up -d --build
 
 seed: ## Run the Spark seed job into iceberg.smoke.events
 	$(COMPOSE) exec spark spark-submit /home/iceberg/jobs/seed_lakehouse.py
