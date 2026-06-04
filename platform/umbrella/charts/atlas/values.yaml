@@ -1,0 +1,44 @@
+# Apache Atlas — values. K8s port of the docker-compose `atlas` service.
+#
+# The community sburn/apache-atlas image runs Atlas with embedded HBase + Solr in
+# one container, so it's heavy and slow to start (a few minutes). The umbrella
+# wires it as the lineage half of the SDX layer; register lineage against it the
+# same way platform/governance/atlas/register-lineage.sh does over compose.
+
+# Set by the umbrella via `condition: atlas.enabled`.
+enabled: true
+
+replicaCount: 1
+
+image:
+  repository: sburn/apache-atlas
+  # Pinned by digest: the :latest tag silently moved Atlas from /opt/apache-atlas
+  # to /apache-atlas once, breaking startup. Empty digest falls back to tag.
+  tag: latest
+  digest: "sha256:9192ed82f33072321590a0cd99be7d04e2afe74c35987dc109160a4f3bf00af7"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 21000
+
+# Basic-auth creds Atlas ships with; used to build the health-probe header.
+# Override in any real cluster.
+auth:
+  user: admin
+  password: admin
+
+# Atlas + embedded HBase/Solr is memory-hungry. These are floors for it to boot;
+# raise them on a real cluster.
+resources:
+  requests:
+    cpu: 500m
+    memory: 1536Mi
+  limits:
+    memory: 3Gi
+
+# Embedded HBase/Solr can take a few minutes; the startupProbe holds liveness off
+# until the REST API answers (failureThreshold * periodSeconds budget).
+startup:
+  periodSeconds: 10
+  failureThreshold: 60
