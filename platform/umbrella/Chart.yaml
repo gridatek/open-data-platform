@@ -35,6 +35,10 @@ dependencies:
   - name: mlflow
     version: "0.1.0"
     condition: mlflow.enabled
+  # Local subchart (charts/console) — the control-plane API.
+  - name: console
+    version: "0.1.0"
+    condition: console.enabled
   - name: minio
     version: "5.4.0"
     repository: https://charts.min.io/

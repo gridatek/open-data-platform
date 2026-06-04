@@ -15,9 +15,9 @@ Dependencies with **official upstream charts** are wired and version-pinned:
 | Superset | superset | 0.15.5  | https://apache.github.io/superset |
 | Airflow  | airflow  | 1.21.0  | https://airflow.apache.org        |
 
-The **SDX layer** (Iceberg REST catalog, Ranger, Atlas) and the **streaming/ML**
-services (Kafka, NiFi, MLflow) have no upstream chart, so they're being ported to
-local subcharts under `charts/`:
+The **SDX layer** (Iceberg REST catalog, Ranger, Atlas), the **streaming/ML**
+services (Kafka, NiFi, MLflow) and the **console** have no upstream chart, so
+they're local subcharts under `charts/` — all now ported:
 
 | Local subchart  | Status   | Notes |
 |-----------------|----------|-------|
@@ -27,20 +27,24 @@ local subcharts under `charts/`:
 | `kafka`         | ✅ done   | Single-node KRaft broker; advertised listener uses the stable `kafka` Service name. Default off. |
 | `nifi`          | ✅ done   | Flow authoring, plain HTTP/anonymous; `startupProbe` on `/nifi`. Default off. |
 | `mlflow`        | ✅ done   | Tracking server; SQLite metadata, artifacts in the MinIO `mlflow` bucket. Default off. |
+| `console`       | ✅ done¹  | Control-plane API (Spring Boot). Env points at the in-cluster Services (Trino pinned to `trino` via `fullnameOverride`). Locally-built image, default off. API only — the Angular web is dev-served. |
 
-¹ Apache publishes no Ranger *admin* image, so it's built from
-`platform/governance/ranger`. **Build and load it before enabling** the
-subchart — that's why `ranger.enabled` defaults to `false`:
+¹ `ranger` and `console` have no published image — they're built from
+`platform/governance/ranger` and `console/api`. **Build and load before
+enabling** (that's why they default to `false`):
 
 ```bash
 docker build -t odp/ranger-admin:2.4.0 platform/governance/ranger
+docker build -t odp/console-api:latest  console/api
 kind load docker-image odp/ranger-admin:2.4.0      # or push to your registry
-helm install odp platform/umbrella --set ranger.enabled=true
+kind load docker-image odp/console-api:latest
+helm install odp platform/umbrella --set ranger.enabled=true --set console.enabled=true
 ```
 
-MinIO + the Iceberg REST catalog + Trino + Atlas (+ Ranger, once its image is
-loaded) now render as a governed lakehouse on K8s (`helm template` in CI); the
-remaining subcharts are `enabled: false` in `values.yaml` until they're ported.
+The lakehouse (MinIO + Iceberg REST + Trino) + SDX (Atlas, Ranger) + the
+streaming/ML and console subcharts now render as the whole platform on K8s.
+`helm-ci` lints/templates it; `kind-ci` deploys the lakehouse subset and runs a
+Trino round-trip on a real cluster.
 
 ## Use
 

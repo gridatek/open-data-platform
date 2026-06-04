@@ -52,8 +52,11 @@ atlas:
     password: admin
 
 # ── Query engine ─────────────────────────────────────────────
+# fullnameOverride pins the Services to `trino` / `trino-worker` so the console
+# (and anything else) can reach the coordinator at a stable `trino:8080`.
 trino:
   enabled: true
+  fullnameOverride: trino
   server:
     workers: 2
   # Wire the Iceberg connector to the shared REST catalog + MinIO so Trino and
@@ -117,6 +120,11 @@ mlflow:
     accessKey: admin
     secretKey: password
 
-# ── Not yet wired: needs a local subchart under ./charts ─────
+# ── Control plane — console API (local subchart) ─────────────
+# Default OFF: the image isn't published — build & load it first, then enable:
+#   docker build -t odp/console-api:latest console/api
+#   kind load docker-image odp/console-api:latest
+# Only the API is containerized; the Angular web is dev-served for now.
 console:
-  enabled: false   # the control-plane API + web
+  enabled: false
+  fullnameOverride: console-api
