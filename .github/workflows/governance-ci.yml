@@ -78,7 +78,10 @@ jobs:
           OUT=$(docker compose exec -T trino trino --user analyst \
             --execute "SELECT kind FROM iceberg.smoke.events WHERE id = 4" | tr -d '"[:space:]')
           echo "analyst sees: $OUT"
-          test "$OUT" != "purchase"
+          # The mask must actually transform 'purchase' -> 'xxxxxxxx'. Asserting the
+          # exact masked value (not just `!= purchase`) fails loudly if the query is
+          # denied and returns empty — which would otherwise slip past a `!=` check.
+          test "$OUT" = "xxxxxxxx"
 
       - name: Dump logs on failure
         if: failure()
