@@ -203,7 +203,7 @@ A Spring Boot API + Angular/Tailwind UI that mirrors Cloudera Manager / Manageme
 - **Data catalog browser** — list Iceberg namespaces/tables via the REST catalog; show schema + snapshots.
 - **Governance panel** — view/edit Ranger policies; show Atlas lineage graphs.
 - **Provisioning** — create/scale/destroy a data service (apply Helm release or K8s manifests via the API).
-- **Multi-environment** — reuse your `@gridatek/nx-supabase` folder-merge idea for env config (dev/staging).
+- **Multi-environment** — folder-merged env config (dev/staging).
 
 This is the part that makes the project portfolio-grade and genuinely yours.
 
