@@ -36,7 +36,7 @@ jobs:
         run: cp .env.example .env
 
       - name: Start lakehouse + Superset (and Spark to seed)
-        run: docker compose -f docker-compose.yml -f docker-compose.services.yml up -d superset spark
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml up -d --build superset spark
 
       - name: Wait for the Iceberg REST catalog
         run: |
@@ -122,7 +122,7 @@ jobs:
         run: cp .env.example .env
 
       - name: Start MLflow (and MinIO via its bucket init)
-        run: docker compose -f docker-compose.yml -f docker-compose.services.yml up -d mlflow
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml up -d --build mlflow
 
       - name: Wait for MLflow
         run: |

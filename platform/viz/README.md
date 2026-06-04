@@ -6,6 +6,7 @@ another consumer of the shared data layer.
 
 ```
 viz/
+├── superset/Dockerfile           # apache/superset + the Trino dialect (→ GHCR)
 ├── superset/superset_config.py   # SQLite metadata, CSRF off (laptop subset)
 └── register-trino.sh             # add Trino as a Superset DB + run a proof query
 ```
@@ -27,7 +28,7 @@ CI runs this in `.github/workflows/services-ci.yml`.
 
 ## ⚠️ Rough edges
 
-- The Trino dialect is `pip install`ed at container start (no custom image yet);
-  fine for the laptop subset, slow on cold start.
-- SQLite metadata + CSRF disabled are **dev-only**. A real deployment uses
+- The Trino dialect is now **baked into a custom image** (`Dockerfile`,
+  published to GHCR), so it's present at start — no cold-start `pip install`.
+- SQLite metadata + CSRF disabled are still **dev-only**. A real deployment uses
   Postgres + Redis + a worker, and keeps CSRF on.

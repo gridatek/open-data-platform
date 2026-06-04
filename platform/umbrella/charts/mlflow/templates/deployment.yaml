@@ -49,12 +49,11 @@ spec:
               value: {{ .Values.s3.secretKey | quote }}
             - name: AWS_REGION
               value: {{ .Values.s3.region | quote }}
-          # Mirrors the compose command: pull boto3, then serve with a SQLite
-          # backend and MinIO-backed artifact store.
+          # boto3 is baked into the image; serve with a SQLite backend and the
+          # MinIO-backed artifact store.
           command: ["/bin/sh", "-c"]
           args:
             - |
-              pip install --no-cache-dir boto3 && \
               mlflow server --host 0.0.0.0 --port {{ .Values.service.port }} \
                 --backend-store-uri sqlite:////mlflow/mlflow.db \
                 --artifacts-destination s3://{{ .Values.s3.bucket }}/ --serve-artifacts
