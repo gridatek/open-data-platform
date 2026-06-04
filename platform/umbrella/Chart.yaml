@@ -35,6 +35,9 @@ dependencies:
   - name: mlflow
     version: "0.1.0"
     condition: mlflow.enabled
+  - name: jupyterhub
+    version: "0.1.0"
+    condition: jupyterhub.enabled
   # Local subchart (charts/console) — the control-plane API.
   - name: console
     version: "0.1.0"
