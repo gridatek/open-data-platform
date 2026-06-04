@@ -22,13 +22,13 @@ local subcharts under `charts/`:
 | Local subchart  | Status   | Notes |
 |-----------------|----------|-------|
 | `iceberg-rest`  | ✅ done   | The SDX catalog spine. Trino's `iceberg` catalog is wired to it via `additionalCatalogs`; MinIO is pinned to a stable Service name so the catalog resolves it. |
+| `atlas`         | ✅ done   | SDX lineage. Single container (embedded HBase + Solr), pinned by digest; `startupProbe` tolerates the slow boot. Heavy (~3Gi) — `--set atlas.enabled=false` to skip. |
 | `ranger`        | ⬜ todo   | Policy server + the column-masking proof. |
-| `atlas`         | ⬜ todo   | Lineage. |
 | `kafka` / `nifi` / `mlflow` | ⬜ todo | Streaming + experiment tracking. |
 
-MinIO + the Iceberg REST catalog + Trino now render as a working lakehouse on K8s
-(`helm template` in CI); the remaining subcharts are `enabled: false` in
-`values.yaml` until they're ported.
+MinIO + the Iceberg REST catalog + Trino (+ Atlas) now render as a governed
+lakehouse on K8s (`helm template` in CI); the remaining subcharts are
+`enabled: false` in `values.yaml` until they're ported.
 
 ## Use
 

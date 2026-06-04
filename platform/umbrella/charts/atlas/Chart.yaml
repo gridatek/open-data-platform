@@ -1,0 +1,9 @@
+apiVersion: v2
+name: atlas
+description: >-
+  Apache Atlas — the lineage half of the SDX clone. Records dataset/process
+  entities and the lineage edges between them. Ported from the docker-compose
+  `atlas` service (community sburn/apache-atlas image with embedded HBase + Solr).
+type: application
+version: 0.1.0
+appVersion: "2.3.0"

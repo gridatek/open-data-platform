@@ -35,6 +35,16 @@ iceberg-rest:
     accessKey: admin
     secretKey: password
 
+# ── SDX lineage — Apache Atlas (local subchart) ──────────────
+# Heavy (embedded HBase + Solr, ~3Gi, slow to start). Disable on small clusters
+# with --set atlas.enabled=false. Stable Service name `atlas` for register-lineage.
+atlas:
+  enabled: true
+  fullnameOverride: atlas
+  auth:
+    user: admin
+    password: admin
+
 # ── Query engine ─────────────────────────────────────────────
 trino:
   enabled: true
@@ -66,11 +76,9 @@ airflow:
 
 # ── Not yet wired: need local subcharts under ./charts ───────
 # These mirror the docker-compose services; porting each to a chart is the
-# remaining Phase 5 work (the Iceberg REST catalog above is the first done).
+# remaining Phase 5 work (Iceberg REST catalog + Atlas above are done).
 ranger:
   enabled: false   # SDX policies (the masking proof)
-atlas:
-  enabled: false   # SDX lineage
 kafka:
   enabled: false   # streaming
 nifi:

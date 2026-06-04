@@ -17,6 +17,10 @@ dependencies:
   - name: iceberg-rest
     version: "0.1.0"
     condition: iceberg-rest.enabled
+  # Local subchart (charts/atlas) — the SDX lineage server.
+  - name: atlas
+    version: "0.1.0"
+    condition: atlas.enabled
   - name: minio
     version: "5.4.0"
     repository: https://charts.min.io/

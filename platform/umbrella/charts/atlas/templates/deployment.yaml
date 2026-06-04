@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "atlas.fullname" . }}
+  labels:
+    {{- include "atlas.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "atlas.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "atlas.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: atlas
+          image: {{ include "atlas.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # No command override: the image's default CMD starts Atlas and tails
+          # its log from the correct path (see the compose service note).
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+          # Embedded HBase/Solr take a few minutes — the startupProbe gates the
+          # liveness check so a slow boot isn't mistaken for a crash.
+          startupProbe:
+            httpGet:
+              path: /api/atlas/admin/version
+              port: http
+              httpHeaders:
+                - name: Authorization
+                  value: {{ printf "Basic %s" (printf "%s:%s" .Values.auth.user .Values.auth.password | b64enc) }}
+            periodSeconds: {{ .Values.startup.periodSeconds }}
+            failureThreshold: {{ .Values.startup.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /api/atlas/admin/version
+              port: http
+              httpHeaders:
+                - name: Authorization
+                  value: {{ printf "Basic %s" (printf "%s:%s" .Values.auth.user .Values.auth.password | b64enc) }}
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /api/atlas/admin/version
+              port: http
+              httpHeaders:
+                - name: Authorization
+                  value: {{ printf "Basic %s" (printf "%s:%s" .Values.auth.user .Values.auth.password | b64enc) }}
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
