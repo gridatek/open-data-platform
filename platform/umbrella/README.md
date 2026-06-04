@@ -27,23 +27,22 @@ they're local subcharts under `charts/` — all now ported:
 | `kafka`         | ✅ done   | Single-node KRaft broker; advertised listener uses the stable `kafka` Service name. Default off. |
 | `nifi`          | ✅ done   | Flow authoring, plain HTTP/anonymous; `startupProbe` on `/nifi`. Default off. |
 | `mlflow`        | ✅ done   | Tracking server; SQLite metadata, artifacts in the MinIO `mlflow` bucket. Default off. |
-| `jupyterhub`    | ✅ done¹  | Multi-user notebooks (≈ CML). Dummy auth, local spawner. Locally-built image, default off. |
-| `console`       | ✅ done¹  | Control-plane API (Spring Boot). Env points at the in-cluster Services (Trino pinned to `trino` via `fullnameOverride`); a ServiceAccount + RBAC let it restart/scale Deployments. Locally-built image, default off. |
-| `console-web`   | ✅ done¹  | Angular UI served by nginx, which reverse-proxies `/api` → `console-api:8090`. Locally-built image, default off; needs `console.enabled=true`. |
+| `jupyterhub`    | ✅ done¹  | Multi-user notebooks (≈ CML). Dummy auth, local spawner. GHCR image, default on. |
+| `console`       | ✅ done¹  | Control-plane API (Spring Boot). Env points at the in-cluster Services (Trino pinned to `trino` via `fullnameOverride`); a ServiceAccount + RBAC let it restart/scale Deployments. GHCR image, default on. |
+| `console-web`   | ✅ done¹  | Angular UI served by nginx, which reverse-proxies `/api` → `console-api:8090`. GHCR image, default on; needs `console` (also on by default). |
 | `opdb`          | ✅ done   | Operational DB — HBase + Phoenix all-in-one; Phoenix Query Server on `opdb:8765`. Default off (heavy, standalone). |
 
 ¹ `ranger`, `jupyterhub`, `console` and `console-web` have no upstream image —
 they're built from `platform/governance/ranger`, `platform/ml/jupyterhub`,
 `console/api` and `console/web` and **published to GHCR** by
 [`publish-images.yml`](../../.github/workflows/publish-images.yml). Their chart
-`image.repository` defaults to those `ghcr.io/gridatek/*` images, so once the
-packages are **public** (or you add an `imagePullSecret`) you just enable them:
+`image.repository` defaults to those `ghcr.io/gridatek/*` images, and the umbrella
+now **defaults them on** — so `helm install odp platform/umbrella` deploys the
+governed lakehouse + Ranger + the console out of the box.
 
-```bash
-helm install odp platform/umbrella \
-  --set ranger.enabled=true --set jupyterhub.enabled=true \
-  --set console.enabled=true --set console-web.enabled=true
-```
+> **Prerequisite:** the GHCR packages start **private**. Set them public (or add
+> an `imagePullSecret`) so the cluster can pull, otherwise these pods
+> `ImagePullBackOff`. Disable any you don't want with `--set <name>.enabled=false`.
 
 To build + use them locally instead of pulling (e.g. on `kind`), tag them as the
 chart's image and load:
@@ -57,8 +56,6 @@ for i in ranger-admin:2.4.0 jupyterhub:latest console-api:latest console-web:lat
   kind load docker-image ghcr.io/gridatek/$i
 done
 ```
-
-They default to `enabled: false`, so this is opt-in either way.
 
 The lakehouse (MinIO + Iceberg REST + Trino) + SDX (Atlas, Ranger) + the
 streaming/ML and console subcharts now render as the whole platform on K8s.

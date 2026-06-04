@@ -84,14 +84,12 @@ airflow:
   enabled: false
 
 # ── SDX policies — Apache Ranger + its Postgres (local subchart) ──
-# Default OFF: the admin image isn't published — build & load it first, then
-# flip enabled=true (see charts/ranger/values.yaml):
-#   docker build -t odp/ranger-admin:2.4.0 platform/governance/ranger
-#   kind load docker-image odp/ranger-admin:2.4.0
+# Default ON: the admin image is published to GHCR (publish-images.yml) and the
+# chart points at it — make the package public (or add an imagePullSecret) to pull.
 # Stable Service names ranger-admin / ranger-db (fullnameOverride) for
 # load-policies.sh and the Trino Ranger plugin.
 ranger:
-  enabled: false
+  enabled: true
   fullnameOverride: ranger
   admin:
     password: "rangerR0cks!"
@@ -119,25 +117,23 @@ mlflow:
     bucket: mlflow
     accessKey: admin
     secretKey: password
-# JupyterHub (≈ CML notebooks). Locally-built image, default off.
+# JupyterHub (≈ CML notebooks). Image published to GHCR; default on.
 jupyterhub:
-  enabled: false
+  enabled: true
   fullnameOverride: jupyterhub
 
 # ── Control plane — console API (local subchart) ─────────────
-# Default OFF: the image isn't published — build & load it first, then enable:
-#   docker build -t odp/console-api:latest console/api
-#   kind load docker-image odp/console-api:latest
-# Only the API is containerized; the Angular web is dev-served for now.
+# Default ON: image published to GHCR (make the package public to pull). Only the
+# API is containerized; the Angular web is the console-web subchart below.
 console:
-  enabled: false
+  enabled: true
   fullnameOverride: console-api
 
 # ── Control plane — console web UI (Angular + nginx, local subchart) ──
-# Default OFF: image built locally (docker build -t odp/console-web:latest
-# console/web), and it needs the console API (nginx proxies /api → console-api:8090).
+# Default ON: image published to GHCR. Needs the console API (nginx proxies
+# /api → console-api:8090), which is also on by default above.
 console-web:
-  enabled: false
+  enabled: true
   fullnameOverride: console-web
   apiUpstream: console-api:8090
 
