@@ -164,12 +164,13 @@ the umbrella Helm chart (see the note under the table).
 
 **Kubernetes/Helm path** — done. The umbrella chart deploys the whole platform: every
 docker-compose service is either an upstream chart (MinIO/Trino/Superset/Airflow) or a local
-subchart (`iceberg-rest`, `atlas`, `ranger`, `kafka`, `nifi`, `mlflow`, `console`, `opdb`).
-`helm-ci` lints + templates it; **`kind-ci` stands up the lakehouse on a real (kind) cluster
-and runs a Trino write/read round-trip**. The SDX layer (Iceberg REST + Ranger + Atlas) was
-also validated live on kind. `ranger` and `console` default off (their images are built
-locally, not published); `atlas` is heavy (~3Gi) and can be disabled. See
-[`platform/umbrella`](platform/umbrella/).
+subchart (`iceberg-rest`, `atlas`, `ranger`, `kafka`, `nifi`, `mlflow`, `jupyterhub`,
+`console`, `console-web`, `opdb`). `helm-ci` lints + templates it; **`kind-ci` deploys it on
+a real (kind) cluster** — one job runs a Trino write/read round-trip on the lakehouse, another
+stands up Ranger + the Trino plugin and **proves a column-mask policy hides a value from the
+analyst** (the same masking proof `governance-ci` runs on docker-compose). Locally-built
+images (`ranger`, `console`, `console-web`, `jupyterhub`) default off; `atlas` is heavy
+(~3Gi) and can be disabled. See [`platform/umbrella`](platform/umbrella/).
 
 The **Operational DB** (HBase + Phoenix) runs standalone as its own overlay, proven by a
 Phoenix SQL round-trip in `opdb-ci`, and ships as the `opdb` subchart.
@@ -223,8 +224,8 @@ policy live, and Atlas records the lineage.
 
 The platform now also deploys on **Kubernetes** via the umbrella Helm chart
 ([`platform/umbrella/`](platform/umbrella/)): every service is an upstream chart or a local
-subchart (including the console API + web), `kind-ci` proves the lakehouse comes up on a real
-cluster and answers a Trino query, and the SDX layer (Iceberg REST + Ranger + Atlas) was
-validated live on kind. The console is a real control plane — it edits Ranger policies and, on
+subchart (including the console API + web), and `kind-ci` proves it on a real cluster — a
+Trino round-trip on the lakehouse, plus the **column-masking proof** (Ranger + the Trino
+plugin enforcing a mask end to end). The console is a real control plane — it edits Ranger policies and, on
 Kubernetes, restarts/scales services through the API (an RBAC'd ServiceAccount). Every row
 of the §3 stack table is built — the platform is feature-complete against this roadmap.
