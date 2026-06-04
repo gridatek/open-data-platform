@@ -1,0 +1,9 @@
+apiVersion: v2
+name: iceberg-rest
+description: >-
+  Apache Iceberg REST catalog — the shared metadata layer of the SDX clone.
+  Every engine (Trino, Spark) reads and writes the same tables through it.
+  Ported from the docker-compose `iceberg-rest` service.
+type: application
+version: 0.1.0
+appVersion: "latest"

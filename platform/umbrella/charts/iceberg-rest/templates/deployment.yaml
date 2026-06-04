@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "iceberg-rest.fullname" . }}
+  labels:
+    {{- include "iceberg-rest.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "iceberg-rest.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "iceberg-rest.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: iceberg-rest
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: rest
+              containerPort: {{ .Values.service.port }}
+          env:
+            # Catalog → S3 (MinIO). Double underscores map to dots in the
+            # iceberg-rest-fixture config keys (CATALOG_S3_PATH__STYLE__ACCESS
+            # → catalog.s3.path-style-access).
+            - name: AWS_ACCESS_KEY_ID
+              value: {{ .Values.s3.accessKey | quote }}
+            - name: AWS_SECRET_ACCESS_KEY
+              value: {{ .Values.s3.secretKey | quote }}
+            - name: AWS_REGION
+              value: {{ .Values.s3.region | quote }}
+            - name: CATALOG_WAREHOUSE
+              value: "s3://{{ .Values.s3.warehouse }}/"
+            - name: CATALOG_IO__IMPL
+              value: org.apache.iceberg.aws.s3.S3FileIO
+            - name: CATALOG_S3_ENDPOINT
+              value: {{ .Values.s3.endpoint | quote }}
+            - name: CATALOG_S3_PATH__STYLE__ACCESS
+              value: {{ .Values.s3.pathStyleAccess | quote }}
+          readinessProbe:
+            tcpSocket:
+              port: rest
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: rest
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
