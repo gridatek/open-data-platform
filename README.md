@@ -79,6 +79,11 @@ flowchart TB
     SDX --> STORE
 ```
 
+> This is the **target** shape. Already running: the SDX layer (catalog, Ranger, Atlas,
+> Iceberg), Spark + Airflow, Trino, NiFi + Kafka, Superset, MLflow, and the console.
+> Not in the running stack yet: JupyterHub (today CML is MLflow + Spark/Jupyter notebooks)
+> and the Operational DB (HBase + Phoenix). See §5 for the per-phase status.
+
 ---
 
 ## 3. The stack: each CDP piece → its open-source equivalent
@@ -92,31 +97,40 @@ flowchart TB
 | CDE — Data Engineering          | Spark + Airflow                         |
 | CDW — Data Warehouse            | Trino + Iceberg (or Impala)             |
 | CDF — Data Flow / streaming     | NiFi + Kafka                            |
-| Cloudera AI / CML               | JupyterHub + MLflow                     |
-| Operational Database            | HBase + Phoenix                         |
+| Cloudera AI / CML               | JupyterHub † + MLflow                   |
+| Operational Database            | HBase + Phoenix †                       |
 | Data Visualization              | Apache Superset                         |
-| Cluster orchestration / runtime | Kubernetes (Minikube/Kind) + Helm       |
+| Cluster orchestration / runtime | Kubernetes (Minikube/Kind) + Helm †     |
 | Cloudera Manager / Mgmt Console | **custom Angular + Spring Boot console**|
 
 The console row is the part only you can build well — it's what makes this a *platform*
 project and not "another docker-compose lakehouse".
 
+> † Target stack; not in the running build yet. Today CML is **MLflow** (with Spark/Jupyter
+> notebooks), the Operational DB is a scaffold, and Kubernetes/Helm is partial — the
+> docker-compose subset is the fully working path. See §5 for status.
+
 ---
 
 ## 4. Repo structure
 
+The **running** stack is wired up in `quickstart/` (docker-compose); `platform/` holds each
+service's configs/assets and the (work-in-progress) Helm charts. Dirs marked *scaffold* are
+README-only placeholders for the K8s path — those services still run, just via compose.
+
 ```
 open-data-platform/
-├── platform/              # the "Runtime": Helm charts for all OSS services
-│   ├── storage/           # MinIO
-│   ├── catalog/           # Nessie/Polaris + Hive Metastore
-│   ├── governance/        # Ranger + Atlas        ← the SDX clone
-│   ├── engineering/       # Spark + Airflow       (≈ CDE)
-│   ├── warehouse/         # Trino + Iceberg       (≈ CDW)
-│   ├── flow/              # NiFi + Kafka          (≈ CDF)
-│   ├── ml/                # JupyterHub + MLflow   (≈ CML)
-│   ├── opdb/              # HBase + Phoenix
-│   └── viz/               # Superset
+├── platform/              # per-service configs/assets + Helm charts (K8s path, WIP)
+│   ├── storage/           # MinIO                 (scaffold — runs via compose)
+│   ├── catalog/           # Nessie/Polaris + Hive Metastore (scaffold)
+│   ├── governance/        # Ranger + Atlas + Trino policies   ← the SDX clone (real)
+│   ├── engineering/       # Airflow DAGs (≈ CDE; Spark jobs live in quickstart/)
+│   ├── warehouse/         # Trino + Iceberg       (scaffold — Trino cfg in quickstart/)
+│   ├── flow/              # NiFi + Kafka          (scaffold)
+│   ├── ml/                # MLflow helpers        (≈ CML)
+│   ├── opdb/              # HBase + Phoenix       (scaffold — not yet built)
+│   ├── viz/               # Superset config
+│   └── umbrella/          # umbrella Helm chart (the K8s deploy, WIP)
 ├── console/               # control plane (≈ Cloudera Manager)
 │   ├── api/               # Spring Boot: K8s client, health, catalog, Ranger admin
 │   └── web/               # Angular + Tailwind
@@ -126,7 +140,7 @@ open-data-platform/
 │   ├── 02-data-analyst/
 │   ├── 03-administrator/
 │   └── 04-ml-engineer/
-├── quickstart/            # laptop subset: docker-compose + kind/minikube bootstrap
+├── quickstart/            # laptop subset: docker-compose (the working path) + bootstrap
 └── docs/
 ```
 
