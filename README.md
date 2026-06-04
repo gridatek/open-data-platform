@@ -133,7 +133,7 @@ open-data-platform/
 │   └── umbrella/          # umbrella Helm chart — the full K8s deploy (helm-ci + kind-ci)
 ├── console/               # control plane (≈ Cloudera Manager)
 │   ├── api/               # Spring Boot: K8s client, health, catalog, Ranger admin
-│   └── web/               # Angular + Tailwind
+│   └── web/               # Angular + Tailwind (nginx Dockerfile + console-web chart)
 ├── labs/                  # the curriculum (markdown + sample datasets)
 │   ├── 00-generalist/
 │   ├── 01-data-engineer/
@@ -175,11 +175,10 @@ locally, not published); `atlas` is heavy (~3Gi) and can be disabled. See
 The **Operational DB** (HBase + Phoenix) runs standalone as its own overlay, proven by a
 Phoenix SQL round-trip in `opdb-ci`, and ships as the `opdb` subchart.
 
-**Still in progress**
+**Target stack, not yet shipped**
 
-- **Console — web + real lifecycle.** The Angular web has no Dockerfile/chart yet (it's
-  dev-served), and the API's restart/scale endpoints are `501` stubs — wiring real
-  provision/scale against the K8s API (with RBAC) is the remaining "Phase 4b" piece.
+- **JupyterHub.** The one row in the §3 stack table still marked `†` — today CML is
+  **MLflow** (with Spark/Jupyter notebooks). Everything else in the table is built.
 
 ---
 
@@ -227,7 +226,8 @@ policy live, and Atlas records the lineage.
 
 The platform now also deploys on **Kubernetes** via the umbrella Helm chart
 ([`platform/umbrella/`](platform/umbrella/)): every service is an upstream chart or a local
-subchart, `kind-ci` proves the lakehouse comes up on a real cluster and answers a Trino query,
-and the SDX layer (Iceberg REST + Ranger + Atlas) was validated live on kind. The open work is
-narrow now: a Dockerfile + chart for the Angular console web, and real provision/scale (with
-RBAC) in the console API.
+subchart (including the console API + web), `kind-ci` proves the lakehouse comes up on a real
+cluster and answers a Trino query, and the SDX layer (Iceberg REST + Ranger + Atlas) was
+validated live on kind. The console is a real control plane — it edits Ranger policies and, on
+Kubernetes, restarts/scales services through the API (an RBAC'd ServiceAccount). The one
+target-stack gap left is **JupyterHub** (CML is MLflow for now).

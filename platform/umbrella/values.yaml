@@ -129,6 +129,14 @@ console:
   enabled: false
   fullnameOverride: console-api
 
+# ── Control plane — console web UI (Angular + nginx, local subchart) ──
+# Default OFF: image built locally (docker build -t odp/console-web:latest
+# console/web), and it needs the console API (nginx proxies /api → console-api:8090).
+console-web:
+  enabled: false
+  fullnameOverride: console-web
+  apiUpstream: console-api:8090
+
 # ── Operational DB — HBase + Phoenix (local subchart) ────────
 # Public image, default off (heavy; standalone, not tied to the lakehouse).
 # Phoenix Query Server reachable at opdb:8765.

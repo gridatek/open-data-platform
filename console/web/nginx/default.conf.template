@@ -1,0 +1,23 @@
+# nginx serves the built Angular SPA and reverse-proxies /api to the console API.
+# The nginx image's entrypoint runs envsubst over this template, substituting
+# only real env vars (${API_UPSTREAM}); nginx's own $variables are left intact.
+server {
+    listen       80;
+    server_name  _;
+    root   /usr/share/nginx/html;
+    index  index.html;
+
+    # Same-origin /api/* → the console API, so the SPA needs no CORS/base-url.
+    location /api/ {
+        proxy_pass         http://${API_UPSTREAM};
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+    }
+
+    # SPA client-side routing: fall back to index.html.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
