@@ -160,7 +160,7 @@ the umbrella Helm chart (see the note under the table).
 | **2 — Console MVP (read-only)** | Angular/Spring Boot dashboard: service health, browse the Iceberg catalog, view Ranger policies. No writes. | ✅ Done | `console-ci` |
 | **3 — Breadth of data services** | Airflow, NiFi + Kafka, Superset, MLflow — each wired to the shared catalog + governance layer. | ✅ Done | `services-ci` |
 | **4 — Console as control plane** | Console restarts/scales services and creates/edits/toggles Ranger policies via the API — the real "Cloudera Manager" move. Proven by flipping the masking policy **through the console** and watching the analyst's query go clear, then masked again. | ✅ Done | `console-control-ci` |
-| **5 — Labs + packaging** | One-command bootstrap, the full lab curriculum (5 tracks, 17 labs), and an umbrella Helm chart that deploys the whole platform on Kubernetes — every service is an upstream chart or a local subchart. | ✅ Done | `helm-ci`, `kind-ci` |
+| **5 — Labs + packaging** | One-command bootstrap, the full lab curriculum (5 tracks, 18 labs), and an umbrella Helm chart that deploys the whole platform on Kubernetes — every service is an upstream chart or a local subchart. | ✅ Done | `helm-ci`, `kind-ci` |
 
 **Kubernetes/Helm path** — done. The umbrella chart deploys the whole platform: every
 docker-compose service is either an upstream chart (MinIO/Trino/Superset/Airflow) or a local
