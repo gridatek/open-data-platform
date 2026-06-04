@@ -1,0 +1,71 @@
+name: publish-images
+
+# Build the platform's locally-built images and push them to GitHub Container
+# Registry (ghcr.io/<owner>/<name>), so the umbrella chart can pull them instead
+# of every user building + `kind load`ing by hand. (opdb uses a public upstream
+# image, so it isn't built here.)
+#
+# Runs on main when an image's source changes, and on demand. Packages are
+# created on first push; set their visibility to public (or use an imagePull
+# Secret) before pulling unauthenticated.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "platform/governance/ranger/**"
+      - "console/api/**"
+      - "console/web/**"
+      - "platform/ml/jupyterhub/**"
+      - ".github/workflows/publish-images.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ranger-admin
+            context: platform/governance/ranger
+            version: "2.4.0"
+          - name: console-api
+            context: console/api
+            version: ""
+          - name: console-web
+            context: console/web
+            version: ""
+          - name: jupyterhub
+            context: platform/ml/jupyterhub
+            version: ""
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute tags
+        id: tags
+        run: |
+          base="ghcr.io/${{ github.repository_owner }}/${{ matrix.name }}"
+          tags="${base}:latest,${base}:sha-${GITHUB_SHA::7}"
+          if [ -n "${{ matrix.version }}" ]; then
+            tags="${tags},${base}:${{ matrix.version }}"
+          fi
+          echo "tags=${tags}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push ${{ matrix.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          provenance: false

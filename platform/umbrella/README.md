@@ -32,24 +32,33 @@ they're local subcharts under `charts/` — all now ported:
 | `console-web`   | ✅ done¹  | Angular UI served by nginx, which reverse-proxies `/api` → `console-api:8090`. Locally-built image, default off; needs `console.enabled=true`. |
 | `opdb`          | ✅ done   | Operational DB — HBase + Phoenix all-in-one; Phoenix Query Server on `opdb:8765`. Default off (heavy, standalone). |
 
-¹ `ranger`, `jupyterhub`, `console` and `console-web` have no published image —
+¹ `ranger`, `jupyterhub`, `console` and `console-web` have no upstream image —
 they're built from `platform/governance/ranger`, `platform/ml/jupyterhub`,
-`console/api` and `console/web`. **Build and load before enabling** (that's why
-they default to `false`):
+`console/api` and `console/web` and **published to GHCR** by
+[`publish-images.yml`](../../.github/workflows/publish-images.yml). Their chart
+`image.repository` defaults to those `ghcr.io/gridatek/*` images, so once the
+packages are **public** (or you add an `imagePullSecret`) you just enable them:
 
 ```bash
-docker build -t odp/ranger-admin:2.4.0 platform/governance/ranger
-docker build -t odp/jupyterhub:latest  platform/ml/jupyterhub
-docker build -t odp/console-api:latest  console/api
-docker build -t odp/console-web:latest  console/web
-kind load docker-image odp/ranger-admin:2.4.0      # or push to your registry
-kind load docker-image odp/jupyterhub:latest
-kind load docker-image odp/console-api:latest
-kind load docker-image odp/console-web:latest
 helm install odp platform/umbrella \
   --set ranger.enabled=true --set jupyterhub.enabled=true \
   --set console.enabled=true --set console-web.enabled=true
 ```
+
+To build + use them locally instead of pulling (e.g. on `kind`), tag them as the
+chart's image and load:
+
+```bash
+docker build -t ghcr.io/gridatek/ranger-admin:2.4.0 platform/governance/ranger
+docker build -t ghcr.io/gridatek/jupyterhub:latest  platform/ml/jupyterhub
+docker build -t ghcr.io/gridatek/console-api:latest  console/api
+docker build -t ghcr.io/gridatek/console-web:latest  console/web
+for i in ranger-admin:2.4.0 jupyterhub:latest console-api:latest console-web:latest; do
+  kind load docker-image ghcr.io/gridatek/$i
+done
+```
+
+They default to `enabled: false`, so this is opt-in either way.
 
 The lakehouse (MinIO + Iceberg REST + Trino) + SDX (Atlas, Ranger) + the
 streaming/ML and console subcharts now render as the whole platform on K8s.

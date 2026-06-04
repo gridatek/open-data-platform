@@ -1,15 +1,16 @@
 # Console web (Angular + nginx) — values.
 #
-# IMPORTANT: no published image — build & load it before enabling:
-#   docker build -t odp/console-web:latest console/web
-#   kind load docker-image odp/console-web:latest      # or push to a registry
-# That's why the umbrella leaves console-web.enabled=false by default.
+# image defaults to the GHCR image published by publish-images.yml (make the
+# package public, or add an imagePullSecret, before pulling). Default off. To
+# build + use locally instead:
+#   docker build -t ghcr.io/gridatek/console-web:latest console/web
+#   kind load docker-image ghcr.io/gridatek/console-web:latest
 enabled: true
 
 replicaCount: 1
 
 image:
-  repository: odp/console-web
+  repository: ghcr.io/gridatek/console-web
   tag: "latest"
   pullPolicy: IfNotPresent
 

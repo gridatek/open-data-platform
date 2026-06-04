@@ -87,8 +87,10 @@ jobs:
 
       - name: Build and load the Ranger admin image
         run: |
-          docker build -t odp/ranger-admin:2.4.0 platform/governance/ranger
-          kind load docker-image odp/ranger-admin:2.4.0 --name odp
+          # Tag it as the chart's default (ghcr) image and load it into the node;
+          # imagePullPolicy IfNotPresent then uses the local copy without pulling.
+          docker build -t ghcr.io/gridatek/ranger-admin:2.4.0 platform/governance/ranger
+          kind load docker-image ghcr.io/gridatek/ranger-admin:2.4.0 --name odp
 
       - name: Add chart repos
         run: |
