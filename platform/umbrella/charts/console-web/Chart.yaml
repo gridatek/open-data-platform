@@ -1,0 +1,11 @@
+apiVersion: v2
+name: console-web
+description: >-
+  Open Data Platform console — Angular/Tailwind UI served by nginx, which
+  reverse-proxies /api to the console API. Built from console/web.
+
+  NOTE: the image is built locally (no published image), so build and load it
+  before enabling this subchart — see values / README.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

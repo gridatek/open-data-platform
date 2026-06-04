@@ -39,6 +39,10 @@ dependencies:
   - name: console
     version: "0.1.0"
     condition: console.enabled
+  # Local subchart (charts/console-web) — the Angular UI (nginx).
+  - name: console-web
+    version: "0.1.0"
+    condition: console-web.enabled
   # Local subchart (charts/opdb) — Operational Database (HBase + Phoenix).
   - name: opdb
     version: "0.1.0"

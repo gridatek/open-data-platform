@@ -19,6 +19,19 @@ npm run build    # production bundle → dist/console
 The API must be running on :8090 (see `../api`). The dev proxy forwards `/api`
 calls to it, so there are no CORS issues in development.
 
+## Container / production
+
+`Dockerfile` builds the app and serves it with **nginx**, which reverse-proxies
+`/api` to the console API (same-origin, so no CORS in prod either):
+
+```bash
+docker build -t odp/console-web:latest .
+docker run -p 8080:80 -e API_UPSTREAM=console-api:8090 odp/console-web:latest
+```
+
+`API_UPSTREAM` (default `console-api:8090`) is where nginx proxies `/api/*`. On
+Kubernetes this ships as the `console-web` umbrella subchart (`platform/umbrella`).
+
 ## Layout
 
 ```

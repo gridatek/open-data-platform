@@ -1,0 +1,28 @@
+# Console web (Angular + nginx) — values.
+#
+# IMPORTANT: no published image — build & load it before enabling:
+#   docker build -t odp/console-web:latest console/web
+#   kind load docker-image odp/console-web:latest      # or push to a registry
+# That's why the umbrella leaves console-web.enabled=false by default.
+enabled: true
+
+replicaCount: 1
+
+image:
+  repository: odp/console-web
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+# Where nginx proxies the SPA's /api/* calls — the console API Service.
+apiUpstream: console-api:8090
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
