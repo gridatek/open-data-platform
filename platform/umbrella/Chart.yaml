@@ -39,6 +39,10 @@ dependencies:
   - name: console
     version: "0.1.0"
     condition: console.enabled
+  # Local subchart (charts/opdb) — Operational Database (HBase + Phoenix).
+  - name: opdb
+    version: "0.1.0"
+    condition: opdb.enabled
   - name: minio
     version: "5.4.0"
     repository: https://charts.min.io/

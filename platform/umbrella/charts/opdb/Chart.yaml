@@ -1,0 +1,9 @@
+apiVersion: v2
+name: opdb
+description: >-
+  Operational Database — HBase + Phoenix (≈ CDP Operational Database). Single-node
+  all-in-one (HBase master + regionserver + ZooKeeper + Phoenix Query Server).
+  Ported from the docker-compose `opdb` service.
+type: application
+version: 0.1.0
+appVersion: "2.0-5.0"
