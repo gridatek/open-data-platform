@@ -79,6 +79,11 @@ flowchart TB
     SDX --> STORE
 ```
 
+> This is the **target** shape. Already running: the SDX layer (catalog, Ranger, Atlas,
+> Iceberg), Spark + Airflow, Trino, NiFi + Kafka, Superset, MLflow, and the console.
+> Not in the running stack yet: JupyterHub (today CML is MLflow + Spark/Jupyter notebooks)
+> and the Operational DB (HBase + Phoenix). See §5 for the per-phase status.
+
 ---
 
 ## 3. The stack: each CDP piece → its open-source equivalent
@@ -92,31 +97,40 @@ flowchart TB
 | CDE — Data Engineering          | Spark + Airflow                         |
 | CDW — Data Warehouse            | Trino + Iceberg (or Impala)             |
 | CDF — Data Flow / streaming     | NiFi + Kafka                            |
-| Cloudera AI / CML               | JupyterHub + MLflow                     |
-| Operational Database            | HBase + Phoenix                         |
+| Cloudera AI / CML               | JupyterHub † + MLflow                   |
+| Operational Database            | HBase + Phoenix †                       |
 | Data Visualization              | Apache Superset                         |
-| Cluster orchestration / runtime | Kubernetes (Minikube/Kind) + Helm       |
+| Cluster orchestration / runtime | Kubernetes (Minikube/Kind) + Helm †     |
 | Cloudera Manager / Mgmt Console | **custom Angular + Spring Boot console**|
 
 The console row is the part only you can build well — it's what makes this a *platform*
 project and not "another docker-compose lakehouse".
 
+> † Target stack; not in the running build yet. Today CML is **MLflow** (with Spark/Jupyter
+> notebooks), the Operational DB is a scaffold, and Kubernetes/Helm is partial — the
+> docker-compose subset is the fully working path. See §5 for status.
+
 ---
 
 ## 4. Repo structure
 
+The **running** stack is wired up in `quickstart/` (docker-compose); `platform/` holds each
+service's configs/assets and the (work-in-progress) Helm charts. Dirs marked *scaffold* are
+README-only placeholders for the K8s path — those services still run, just via compose.
+
 ```
 open-data-platform/
-├── platform/              # the "Runtime": Helm charts for all OSS services
-│   ├── storage/           # MinIO
-│   ├── catalog/           # Nessie/Polaris + Hive Metastore
-│   ├── governance/        # Ranger + Atlas        ← the SDX clone
-│   ├── engineering/       # Spark + Airflow       (≈ CDE)
-│   ├── warehouse/         # Trino + Iceberg       (≈ CDW)
-│   ├── flow/              # NiFi + Kafka          (≈ CDF)
-│   ├── ml/                # JupyterHub + MLflow   (≈ CML)
-│   ├── opdb/              # HBase + Phoenix
-│   └── viz/               # Superset
+├── platform/              # per-service configs/assets + Helm charts (K8s path, WIP)
+│   ├── storage/           # MinIO                 (scaffold — runs via compose)
+│   ├── catalog/           # Nessie/Polaris + Hive Metastore (scaffold)
+│   ├── governance/        # Ranger + Atlas + Trino policies   ← the SDX clone (real)
+│   ├── engineering/       # Airflow DAGs (≈ CDE; Spark jobs live in quickstart/)
+│   ├── warehouse/         # Trino + Iceberg       (scaffold — Trino cfg in quickstart/)
+│   ├── flow/              # NiFi + Kafka          (scaffold)
+│   ├── ml/                # MLflow helpers        (≈ CML)
+│   ├── opdb/              # HBase + Phoenix       (scaffold — not yet built)
+│   ├── viz/               # Superset config
+│   └── umbrella/          # umbrella Helm chart (the K8s deploy, WIP)
 ├── console/               # control plane (≈ Cloudera Manager)
 │   ├── api/               # Spring Boot: K8s client, health, catalog, Ranger admin
 │   └── web/               # Angular + Tailwind
@@ -126,7 +140,7 @@ open-data-platform/
 │   ├── 02-data-analyst/
 │   ├── 03-administrator/
 │   └── 04-ml-engineer/
-├── quickstart/            # laptop subset: docker-compose + kind/minikube bootstrap
+├── quickstart/            # laptop subset: docker-compose (the working path) + bootstrap
 └── docs/
 ```
 
@@ -134,22 +148,29 @@ open-data-platform/
 
 ## 5. Phased build roadmap
 
-Build the platform incrementally; each phase is independently usable and demoable.
+Build the platform incrementally; each phase is independently usable and demoable. The
+**docker-compose laptop subset of every phase below is implemented and proven in CI** — each
+row maps to a workflow in [`.github/workflows`](.github/workflows/) that brings the stack up
+and asserts the behaviour end to end. The full Kubernetes/Helm path and a couple of services
+are still in progress (see notes under the table).
 
-- **Phase 0 — Lakehouse core.** MinIO + Iceberg + a REST catalog + Trino + Spark.
-  One bucket, one Iceberg table, queryable from Trino and writable from Spark. This is the
-  spine everything else hangs off.
-- **Phase 1 — The SDX clone (the differentiator).** Add Ranger for table/column policies
-  and Atlas for lineage over the Phase 0 lakehouse. Prove that a Ranger policy actually
-  masks a column in a Trino query. This is what makes it "Cloudera-like".
-- **Phase 2 — Console MVP (read-only).** Angular/Spring Boot dashboard: list services and
-  health from the K8s API, browse the Iceberg catalog, view Ranger policies. No writes yet.
-- **Phase 3 — Breadth of data services.** Add Airflow, NiFi + Kafka, Superset, JupyterHub +
-  MLflow as Helm charts, each wired to the shared catalog + governance layer.
-- **Phase 4 — Console as control plane.** Console can now provision/scale services and edit
-  Ranger policies via the API — the real "Cloudera Manager" experience.
-- **Phase 5 — Labs + packaging.** Umbrella Helm chart, one-command bootstrap, and the full
-  lab curriculum with cert-alignment callouts.
+| Phase | What it adds | Status | Proven by |
+|-------|--------------|--------|-----------|
+| **0 — Lakehouse core** | MinIO + Iceberg + a REST catalog + Trino + Spark: one bucket, one Iceberg table, queryable from Trino and writable from Spark. The spine everything hangs off. | ✅ Done | `quickstart-ci` |
+| **1 — The SDX clone** (the differentiator) | Ranger table/column policies + Atlas lineage over Phase 0. A Ranger policy genuinely masks a column in a Trino query (`purchase` → `xxxxxxxx`); Atlas records the lineage edge. This is what makes it "Cloudera-like". | ✅ Done | `governance-ci`, `atlas-ci` |
+| **2 — Console MVP (read-only)** | Angular/Spring Boot dashboard: service health, browse the Iceberg catalog, view Ranger policies. No writes. | ✅ Done | `console-ci` |
+| **3 — Breadth of data services** | Airflow, NiFi + Kafka, Superset, MLflow — each wired to the shared catalog + governance layer. | ✅ Done | `services-ci` |
+| **4 — Console as control plane** | Console restarts/scales services and creates/edits/toggles Ranger policies via the API — the real "Cloudera Manager" move. Proven by flipping the masking policy **through the console** and watching the analyst's query go clear, then masked again. | ✅ Done | `console-control-ci` |
+| **5 — Labs + packaging** | One-command bootstrap, umbrella Helm chart, and the full lab curriculum (5 tracks, 17 labs) with cert-alignment callouts. | 🟡 Mostly done | `helm-ci` |
+
+**Still in progress**
+
+- **Kubernetes/Helm path.** The umbrella chart lints and template-renders in CI, but currently
+  only vendors the upstream MinIO/Trino/Superset/Airflow charts. The SDX subcharts (REST
+  catalog, Ranger, Atlas) and the streaming/ML services have no upstream chart yet and are
+  scaffolded as local subcharts, disabled by default — so today the K8s deploy is partial and
+  the docker-compose subset is the fully working path.
+- **Operational DB (HBase + Phoenix).** Still a scaffold; not yet wired up or tested.
 
 ---
 
@@ -182,15 +203,21 @@ A Spring Boot API + Angular/Tailwind UI that mirrors Cloudera Manager / Manageme
 - **Data catalog browser** — list Iceberg namespaces/tables via the REST catalog; show schema + snapshots.
 - **Governance panel** — view/edit Ranger policies; show Atlas lineage graphs.
 - **Provisioning** — create/scale/destroy a data service (apply Helm release or K8s manifests via the API).
-- **Multi-environment** — reuse your `@gridatek/nx-supabase` folder-merge idea for env config (dev/staging).
+- **Multi-environment** — folder-merged env config (dev/staging).
 
 This is the part that makes the project portfolio-grade and genuinely yours.
 
 ---
 
-## 8. Suggested next step
+## 8. Where it stands / what's next
 
-Start at **Phase 0** as a single `quickstart/docker-compose.yml` (MinIO + Iceberg REST
-catalog + Trino + a Spark job) so contributors get a working lakehouse in one command,
-then graduate the same components into Helm charts for the K8s path. Lock the SDX clone
-(Phase 1) early — it's the thing that distinguishes this from every other lakehouse demo.
+Phases 0–4 run today as the docker-compose laptop subset and are proven end to end in CI
+(see the table in §5). The SDX clone — the thing that distinguishes this from every other
+lakehouse demo — works: a Ranger policy masks a real Trino query, the console toggles that
+policy live, and Atlas records the lineage.
+
+The open work is **graduating the same components onto Kubernetes**: turn the SDX layer
+(REST catalog, Ranger, Atlas) and the streaming/ML services into local subcharts under the
+umbrella chart and enable them by default, then wire the Operational DB (HBase + Phoenix).
+Until then, `quickstart/` (docker-compose) is the fully working path; `platform/umbrella/`
+is the Helm path under construction.
