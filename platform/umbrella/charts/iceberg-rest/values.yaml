@@ -1,0 +1,39 @@
+# Iceberg REST catalog — values.
+#
+# This is the K8s port of the docker-compose `iceberg-rest` service. It fronts
+# an S3 bucket (MinIO) and hands the same Iceberg tables to Trino and Spark.
+
+# Set by the umbrella via `condition: iceberg-rest.enabled`.
+enabled: true
+
+replicaCount: 1
+
+image:
+  repository: apache/iceberg-rest-fixture
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8181
+
+# Object storage the catalog writes table data/metadata to.
+#   endpoint  — the in-cluster MinIO Service. Matches `minio.fullnameOverride`
+#               in the umbrella values so this resolves without guessing names.
+#   warehouse — bucket created by the MinIO subchart's `buckets:` list.
+s3:
+  endpoint: http://minio:9000
+  region: us-east-1
+  warehouse: warehouse
+  pathStyleAccess: true
+  # Dev-only creds — must match the MinIO root user/password in the umbrella
+  # values. Override with a secret in any real cluster.
+  accessKey: admin
+  secretKey: password
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 512Mi
