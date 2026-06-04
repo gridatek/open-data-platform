@@ -16,6 +16,16 @@ cd quickstart
 
 Workbenches: Jupyter http://localhost:8888 · MLflow http://localhost:5000.
 
+For the **multi-user** notebook hub (the closer CML analog — users log in and
+each gets their own JupyterLab), bring up JupyterHub:
+
+```bash
+make jupyterhub     # JupyterHub http://localhost:8000 (any user / password "jupyter")
+```
+
+The labs below use the single Spark Jupyter on :8888 for simplicity; the same
+PySpark code runs in a JupyterHub-spawned notebook.
+
 ## Labs
 
 | # | Lab | Cert objective it maps to |

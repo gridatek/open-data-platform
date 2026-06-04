@@ -4,8 +4,9 @@
 
 ## Goal
 
-Manage the running services: inspect, restart, and scale. You'll also see where
-the console's control plane is wired vs. stubbed, so you understand the K8s path.
+Manage the running services: inspect, restart, and scale. You'll see how the
+console's restart/scale run against the Kubernetes API (and why the same call
+returns 501 in the docker-compose subset), so you understand the K8s path.
 
 ## Steps
 
@@ -29,19 +30,22 @@ the console's control plane is wired vs. stubbed, so you understand the K8s path
    > **On real CDP:** an admin restarts/rolls a service from the Management
    > Console, which tells Kubernetes to recreate the pods.
 
-3. **Try it through the console API** — and meet the honest boundary:
+3. **Try it through the console API** — and meet the boundary between the two paths:
 
    ```bash
    curl -s -o /dev/null -w "%{http_code}\n" \
      -X POST http://localhost:8090/api/services/superset/restart
    ```
 
-   Returns **501**. The endpoint exists and defines the contract, but lifecycle
-   control needs the Kubernetes API, which the laptop subset doesn't have.
+   Returns **501** *here*. The endpoint is real, but restart/scale act on a
+   Kubernetes Deployment — and the docker-compose laptop subset has no cluster,
+   so there's no `ServiceControlService` bean and it answers 501.
 
-   > **On real CDP:** this call would scale/restart a Deployment. Wiring the K8s
-   > client (apply Helm release / `kubectl scale`) is the platform's **Phase 4b**
-   > — see `console/api/.../control/ServiceControlController.java`.
+   > **On Kubernetes (the umbrella chart):** the same call *works* — the console
+   > runs with an RBAC'd ServiceAccount and rolling-restarts (or scales) the
+   > Deployment through the K8s API. `kind-ci` exercises this path. See
+   > `console/api/.../control/KubernetesServiceControlService.java`.
+   > **On real CDP:** the Management Console restarts/scales a Deployment the same way.
 
 4. **Scaling — the concept.** Trino scales by adding *workers*:
 
@@ -49,7 +53,8 @@ the console's control plane is wired vs. stubbed, so you understand the K8s path
 
      ```bash
      helm upgrade odp platform/umbrella --set trino.server.workers=4
-     # or: kubectl scale deploy/odp-trino-worker --replicas=4
+     # or: kubectl scale deploy/trino-worker --replicas=4
+     # or, through the console: POST /api/services/trino-worker/scale {"replicas":4}
      ```
 
    - **In docker-compose:** the laptop subset runs a single Trino; horizontal
@@ -63,9 +68,11 @@ the console's control plane is wired vs. stubbed, so you understand the K8s path
 
 - [ ] `docker compose ps` lists the running services (step 1).
 - [ ] `superset` comes back healthy after a restart (step 2).
-- [ ] The console restart endpoint returns `501` (step 3) — expected, by design.
+- [ ] The console restart endpoint returns `501` in the laptop subset (step 3) —
+      no cluster here; on Kubernetes it rolling-restarts the Deployment.
 
 ## Going further
 
-- Read `ServiceControlController.java` to see the contract that Phase 4b fills.
+- Read `KubernetesServiceControlService.java` to see how restart/scale hit the
+  K8s API, and the `console` chart's `rbac.yaml` for the Role that allows it.
 - Next: [Lab 4 — audit trails & access review](lab-04-audit-trails.md).

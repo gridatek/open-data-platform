@@ -25,8 +25,9 @@ health at a glance, and understand where that signal comes from.
    > **On open-source:** in the laptop subset there is no Kubernetes, so "is it
    > up?" is a fast HTTP health probe.
    > **On real CDP:** the Management Console reads the **K8s API** for pod/replica
-   > status. The console's API shape is identical — only the source changes
-   > (Phase 4b swaps the probe for a K8s client).
+   > status. The console's API shape is identical — only the source differs (HTTP
+   > health probes here; the console's restart/scale actions *do* use the K8s API
+   > on the umbrella chart).
 
 3. **Cause a failure and watch it flip.** Stop one service and re-check:
 
