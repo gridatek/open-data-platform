@@ -23,12 +23,22 @@ local subcharts under `charts/`:
 |-----------------|----------|-------|
 | `iceberg-rest`  | ✅ done   | The SDX catalog spine. Trino's `iceberg` catalog is wired to it via `additionalCatalogs`; MinIO is pinned to a stable Service name so the catalog resolves it. |
 | `atlas`         | ✅ done   | SDX lineage. Single container (embedded HBase + Solr), pinned by digest; `startupProbe` tolerates the slow boot. Heavy (~3Gi) — `--set atlas.enabled=false` to skip. |
-| `ranger`        | ⬜ todo   | Policy server + the column-masking proof. |
+| `ranger`        | ✅ done¹  | Policy server + UI **and** its Postgres metadata store (admin Deployment + db Deployment/Service/PVC). Stable Service names `ranger-admin` / `ranger-db`. |
 | `kafka` / `nifi` / `mlflow` | ⬜ todo | Streaming + experiment tracking. |
 
-MinIO + the Iceberg REST catalog + Trino (+ Atlas) now render as a governed
-lakehouse on K8s (`helm template` in CI); the remaining subcharts are
-`enabled: false` in `values.yaml` until they're ported.
+¹ Apache publishes no Ranger *admin* image, so it's built from
+`platform/governance/ranger`. **Build and load it before enabling** the
+subchart — that's why `ranger.enabled` defaults to `false`:
+
+```bash
+docker build -t odp/ranger-admin:2.4.0 platform/governance/ranger
+kind load docker-image odp/ranger-admin:2.4.0      # or push to your registry
+helm install odp platform/umbrella --set ranger.enabled=true
+```
+
+MinIO + the Iceberg REST catalog + Trino + Atlas (+ Ranger, once its image is
+loaded) now render as a governed lakehouse on K8s (`helm template` in CI); the
+remaining subcharts are `enabled: false` in `values.yaml` until they're ported.
 
 ## Use
 

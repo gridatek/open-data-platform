@@ -1,0 +1,13 @@
+apiVersion: v2
+name: ranger
+description: >-
+  Apache Ranger Admin — the policy half of the SDX clone (table/column access +
+  masking). Ships its own Postgres metadata store. Ported from the docker-compose
+  `ranger-db` + `ranger-admin` services.
+
+  NOTE: the admin image is built locally from platform/governance/ranger (Apache
+  publishes no admin image), so it must be built and loaded into the cluster
+  before enabling this subchart — see values.yaml / README.
+type: application
+version: 0.1.0
+appVersion: "2.8.0"

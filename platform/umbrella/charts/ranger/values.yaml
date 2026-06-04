@@ -1,0 +1,58 @@
+# Apache Ranger — values. K8s port of the docker-compose ranger-db + ranger-admin.
+#
+# IMPORTANT: Apache publishes no Ranger *admin* image, so admin.image is built
+# locally from platform/governance/ranger and must be present in the cluster
+# before this subchart can run, e.g.:
+#
+#   docker build -t odp/ranger-admin:2.4.0 platform/governance/ranger
+#   kind load docker-image odp/ranger-admin:2.4.0      # or push to your registry
+#
+# That's why the umbrella leaves ranger.enabled=false by default — flip it on
+# once the image is loaded.
+
+# Set by the umbrella via `condition: ranger.enabled`.
+enabled: true
+
+# ── Ranger admin: policy server + UI ─────────────────────────
+admin:
+  image:
+    repository: odp/ranger-admin
+    tag: "2.4.0"               # the tag the compose build produces
+    pullPolicy: IfNotPresent
+  # Password for the built-in `admin` user (and tagsync/usersync/keyadmin).
+  password: "rangerR0cks!"
+  service:
+    type: ClusterIP
+    port: 6080
+  # Schema setup + JVM start is slow; the startupProbe budgets for it.
+  startup:
+    periodSeconds: 10
+    failureThreshold: 60
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      memory: 2Gi
+
+# ── Ranger metadata DB (Postgres) ────────────────────────────
+db:
+  image:
+    repository: postgres
+    tag: "15"
+    pullPolicy: IfNotPresent
+  user: rangeradmin
+  password: rangeradmin
+  name: ranger
+  service:
+    port: 5432
+  persistence:
+    enabled: true
+    size: 5Gi
+    # storageClass: ""        # use the cluster default unless set
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
