@@ -107,8 +107,8 @@ The console row is the part only you can build well — it's what makes this a *
 project and not "another docker-compose lakehouse".
 
 > † Target stack; not in the running build yet. Today CML is **MLflow** (with Spark/Jupyter
-> notebooks), the Operational DB is a scaffold, and Kubernetes/Helm is partial — the
-> docker-compose subset is the fully working path. See §5 for status.
+> notebooks) and the Operational DB is a scaffold. Everything else runs on both
+> docker-compose and the umbrella Helm chart on Kubernetes. See §5 for status.
 
 ---
 
@@ -120,7 +120,7 @@ README-only placeholders for the K8s path — those services still run, just via
 
 ```
 open-data-platform/
-├── platform/              # per-service configs/assets + Helm charts (K8s path, WIP)
+├── platform/              # per-service configs/assets; the K8s deploy is umbrella/ below
 │   ├── storage/           # MinIO                 (scaffold — runs via compose)
 │   ├── catalog/           # Nessie/Polaris + Hive Metastore (scaffold)
 │   ├── governance/        # Ranger + Atlas + Trino policies   ← the SDX clone (real)
@@ -130,7 +130,7 @@ open-data-platform/
 │   ├── ml/                # MLflow helpers        (≈ CML)
 │   ├── opdb/              # HBase + Phoenix       (scaffold — not yet built)
 │   ├── viz/               # Superset config
-│   └── umbrella/          # umbrella Helm chart (the K8s deploy, WIP)
+│   └── umbrella/          # umbrella Helm chart — the full K8s deploy (helm-ci + kind-ci)
 ├── console/               # control plane (≈ Cloudera Manager)
 │   ├── api/               # Spring Boot: K8s client, health, catalog, Ranger admin
 │   └── web/               # Angular + Tailwind
@@ -151,8 +151,8 @@ open-data-platform/
 Build the platform incrementally; each phase is independently usable and demoable. The
 **docker-compose laptop subset of every phase below is implemented and proven in CI** — each
 row maps to a workflow in [`.github/workflows`](.github/workflows/) that brings the stack up
-and asserts the behaviour end to end. The full Kubernetes/Helm path and a couple of services
-are still in progress (see notes under the table).
+and asserts the behaviour end to end. The whole platform now also deploys on Kubernetes via
+the umbrella Helm chart; only the Operational DB is still a scaffold (see notes under the table).
 
 | Phase | What it adds | Status | Proven by |
 |-------|--------------|--------|-----------|
@@ -161,16 +161,22 @@ are still in progress (see notes under the table).
 | **2 — Console MVP (read-only)** | Angular/Spring Boot dashboard: service health, browse the Iceberg catalog, view Ranger policies. No writes. | ✅ Done | `console-ci` |
 | **3 — Breadth of data services** | Airflow, NiFi + Kafka, Superset, MLflow — each wired to the shared catalog + governance layer. | ✅ Done | `services-ci` |
 | **4 — Console as control plane** | Console restarts/scales services and creates/edits/toggles Ranger policies via the API — the real "Cloudera Manager" move. Proven by flipping the masking policy **through the console** and watching the analyst's query go clear, then masked again. | ✅ Done | `console-control-ci` |
-| **5 — Labs + packaging** | One-command bootstrap, umbrella Helm chart, and the full lab curriculum (5 tracks, 17 labs) with cert-alignment callouts. | 🟡 Mostly done | `helm-ci` |
+| **5 — Labs + packaging** | One-command bootstrap, the full lab curriculum (5 tracks, 17 labs), and an umbrella Helm chart that deploys the whole platform on Kubernetes — every service is an upstream chart or a local subchart. | ✅ Done | `helm-ci`, `kind-ci` |
+
+**Kubernetes/Helm path** — done. The umbrella chart deploys the whole platform: every
+docker-compose service is either an upstream chart (MinIO/Trino/Superset/Airflow) or a local
+subchart (`iceberg-rest`, `atlas`, `ranger`, `kafka`, `nifi`, `mlflow`, `console`). `helm-ci`
+lints + templates it; **`kind-ci` stands up the lakehouse on a real (kind) cluster and runs a
+Trino write/read round-trip**. The SDX layer (Iceberg REST + Ranger + Atlas) was also validated
+live on kind. `ranger` and `console` default off (their images are built locally, not
+published); `atlas` is heavy (~3Gi) and can be disabled. See [`platform/umbrella`](platform/umbrella/).
 
 **Still in progress**
 
-- **Kubernetes/Helm path.** The umbrella chart lints and template-renders in CI, but currently
-  only vendors the upstream MinIO/Trino/Superset/Airflow charts. The SDX subcharts (REST
-  catalog, Ranger, Atlas) and the streaming/ML services have no upstream chart yet and are
-  scaffolded as local subcharts, disabled by default — so today the K8s deploy is partial and
-  the docker-compose subset is the fully working path.
 - **Operational DB (HBase + Phoenix).** Still a scaffold; not yet wired up or tested.
+- **Console — web + real lifecycle.** The Angular web has no Dockerfile/chart yet (it's
+  dev-served), and the API's restart/scale endpoints are `501` stubs — wiring real
+  provision/scale against the K8s API (with RBAC) is the remaining "Phase 4b" piece.
 
 ---
 
@@ -216,8 +222,9 @@ Phases 0–4 run today as the docker-compose laptop subset and are proven end to
 lakehouse demo — works: a Ranger policy masks a real Trino query, the console toggles that
 policy live, and Atlas records the lineage.
 
-The open work is **graduating the same components onto Kubernetes**: turn the SDX layer
-(REST catalog, Ranger, Atlas) and the streaming/ML services into local subcharts under the
-umbrella chart and enable them by default, then wire the Operational DB (HBase + Phoenix).
-Until then, `quickstart/` (docker-compose) is the fully working path; `platform/umbrella/`
-is the Helm path under construction.
+The platform now also deploys on **Kubernetes** via the umbrella Helm chart
+([`platform/umbrella/`](platform/umbrella/)): every service is an upstream chart or a local
+subchart, `kind-ci` proves the lakehouse comes up on a real cluster and answers a Trino query,
+and the SDX layer (Iceberg REST + Ranger + Atlas) was validated live on kind. The open work is
+narrower now: the Operational DB (HBase + Phoenix), a Dockerfile + chart for the Angular console
+web, and real provision/scale (with RBAC) in the console API.
