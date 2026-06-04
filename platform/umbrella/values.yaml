@@ -119,6 +119,10 @@ mlflow:
     bucket: mlflow
     accessKey: admin
     secretKey: password
+# JupyterHub (≈ CML notebooks). Locally-built image, default off.
+jupyterhub:
+  enabled: false
+  fullnameOverride: jupyterhub
 
 # ── Control plane — console API (local subchart) ─────────────
 # Default OFF: the image isn't published — build & load it first, then enable:

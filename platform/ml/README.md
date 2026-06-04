@@ -1,12 +1,13 @@
 # ml — JupyterHub + MLflow (≈ CML)
 
-Machine Learning: **MLflow** for experiment tracking + model registry, with
-notebooks (the Phase 0 `spark-iceberg` image already ships a Jupyter on :8888;
-a multi-user JupyterHub is a later step).
+Machine Learning: **MLflow** for experiment tracking + model registry, and
+**JupyterHub** for multi-user notebooks ([`jupyterhub/`](jupyterhub/)). (The
+Phase 0 `spark-iceberg` image also ships a single Jupyter on :8888.)
 
 ```
 ml/
-└── log-run.sh   # log a run to MLflow via REST and read it back (the proof)
+├── log-run.sh      # log a run to MLflow via REST and read it back (the proof)
+└── jupyterhub/     # multi-user notebook hub (Dockerfile + config + smoke)
 ```
 
 ## Run (Phase 3 overlay)
@@ -31,4 +32,4 @@ in `.github/workflows/services-ci.yml`.
   Postgres. Artifacts in MinIO are the production-shaped part.
 - The proof logs metadata via REST; it doesn't yet upload an artifact through
   the MinIO path. Logging a model from a notebook (`mlflow.log_artifact`) is the
-  next step, alongside multi-user JupyterHub.
+  next step.

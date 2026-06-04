@@ -79,10 +79,10 @@ flowchart TB
     SDX --> STORE
 ```
 
-> This is the **target** shape. Already running: the SDX layer (catalog, Ranger, Atlas,
-> Iceberg), Spark + Airflow, Trino, NiFi + Kafka, Superset, MLflow, the Operational DB
-> (HBase + Phoenix), and the console. Not in the running stack yet: only JupyterHub (today
-> CML is MLflow + Spark/Jupyter notebooks). See §5 for the per-phase status.
+> Every box in this diagram now runs — the SDX layer (catalog, Ranger, Atlas, Iceberg),
+> Spark + Airflow, Trino, NiFi + Kafka, Superset, JupyterHub + MLflow, the Operational DB
+> (HBase + Phoenix), and the console — on both docker-compose and the umbrella Helm chart.
+> See §5 for the per-phase status.
 
 ---
 
@@ -97,7 +97,7 @@ flowchart TB
 | CDE — Data Engineering          | Spark + Airflow                         |
 | CDW — Data Warehouse            | Trino + Iceberg (or Impala)             |
 | CDF — Data Flow / streaming     | NiFi + Kafka                            |
-| Cloudera AI / CML               | JupyterHub † + MLflow                   |
+| Cloudera AI / CML               | JupyterHub + MLflow                     |
 | Operational Database            | HBase + Phoenix                         |
 | Data Visualization              | Apache Superset                         |
 | Cluster orchestration / runtime | Kubernetes (Minikube/Kind) + Helm       |
@@ -106,9 +106,8 @@ flowchart TB
 The console row is the part only you can build well — it's what makes this a *platform*
 project and not "another docker-compose lakehouse".
 
-> † Today CML is **MLflow** (with Spark/Jupyter notebooks); JupyterHub is the one
-> not-yet-shipped piece. Everything else runs on both docker-compose and the umbrella Helm
-> chart on Kubernetes. See §5 for status.
+> Every row above runs on both docker-compose and the umbrella Helm chart on Kubernetes.
+> See §5 for status.
 
 ---
 
@@ -127,7 +126,7 @@ open-data-platform/
 │   ├── engineering/       # Airflow DAGs (≈ CDE; Spark jobs live in quickstart/)
 │   ├── warehouse/         # Trino + Iceberg       (scaffold — Trino cfg in quickstart/)
 │   ├── flow/              # NiFi + Kafka          (scaffold)
-│   ├── ml/                # MLflow helpers        (≈ CML)
+│   ├── ml/                # MLflow helpers + JupyterHub (≈ CML)
 │   ├── opdb/              # HBase + Phoenix smoke (opdb-ci; overlay + subchart)
 │   ├── viz/               # Superset config
 │   └── umbrella/          # umbrella Helm chart — the full K8s deploy (helm-ci + kind-ci)
@@ -175,10 +174,8 @@ locally, not published); `atlas` is heavy (~3Gi) and can be disabled. See
 The **Operational DB** (HBase + Phoenix) runs standalone as its own overlay, proven by a
 Phoenix SQL round-trip in `opdb-ci`, and ships as the `opdb` subchart.
 
-**Target stack, not yet shipped**
-
-- **JupyterHub.** The one row in the §3 stack table still marked `†` — today CML is
-  **MLflow** (with Spark/Jupyter notebooks). Everything else in the table is built.
+Every row of the §3 stack table is now built — including JupyterHub (≈ CML notebooks),
+proven by `jupyterhub-ci` and shipped as the `jupyterhub` subchart.
 
 ---
 
@@ -229,5 +226,5 @@ The platform now also deploys on **Kubernetes** via the umbrella Helm chart
 subchart (including the console API + web), `kind-ci` proves the lakehouse comes up on a real
 cluster and answers a Trino query, and the SDX layer (Iceberg REST + Ranger + Atlas) was
 validated live on kind. The console is a real control plane — it edits Ranger policies and, on
-Kubernetes, restarts/scales services through the API (an RBAC'd ServiceAccount). The one
-target-stack gap left is **JupyterHub** (CML is MLflow for now).
+Kubernetes, restarts/scales services through the API (an RBAC'd ServiceAccount). Every row
+of the §3 stack table is built — the platform is feature-complete against this roadmap.

@@ -1,0 +1,12 @@
+apiVersion: v2
+name: jupyterhub
+description: >-
+  JupyterHub — multi-user notebooks (≈ Cloudera ML). Single-node, dummy auth, a
+  spawner that needs no system accounts. Ported from the docker-compose
+  `jupyterhub` service.
+
+  NOTE: the image is built locally from platform/ml/jupyterhub (no published
+  image), so build and load it before enabling — see values / README.
+type: application
+version: 0.1.0
+appVersion: "5.2.1"

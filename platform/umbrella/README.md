@@ -27,23 +27,28 @@ they're local subcharts under `charts/` — all now ported:
 | `kafka`         | ✅ done   | Single-node KRaft broker; advertised listener uses the stable `kafka` Service name. Default off. |
 | `nifi`          | ✅ done   | Flow authoring, plain HTTP/anonymous; `startupProbe` on `/nifi`. Default off. |
 | `mlflow`        | ✅ done   | Tracking server; SQLite metadata, artifacts in the MinIO `mlflow` bucket. Default off. |
+| `jupyterhub`    | ✅ done¹  | Multi-user notebooks (≈ CML). Dummy auth, local spawner. Locally-built image, default off. |
 | `console`       | ✅ done¹  | Control-plane API (Spring Boot). Env points at the in-cluster Services (Trino pinned to `trino` via `fullnameOverride`); a ServiceAccount + RBAC let it restart/scale Deployments. Locally-built image, default off. |
 | `console-web`   | ✅ done¹  | Angular UI served by nginx, which reverse-proxies `/api` → `console-api:8090`. Locally-built image, default off; needs `console.enabled=true`. |
 | `opdb`          | ✅ done   | Operational DB — HBase + Phoenix all-in-one; Phoenix Query Server on `opdb:8765`. Default off (heavy, standalone). |
 
-¹ `ranger`, `console` and `console-web` have no published image — they're built
-from `platform/governance/ranger`, `console/api` and `console/web`. **Build and
-load before enabling** (that's why they default to `false`):
+¹ `ranger`, `jupyterhub`, `console` and `console-web` have no published image —
+they're built from `platform/governance/ranger`, `platform/ml/jupyterhub`,
+`console/api` and `console/web`. **Build and load before enabling** (that's why
+they default to `false`):
 
 ```bash
 docker build -t odp/ranger-admin:2.4.0 platform/governance/ranger
+docker build -t odp/jupyterhub:latest  platform/ml/jupyterhub
 docker build -t odp/console-api:latest  console/api
 docker build -t odp/console-web:latest  console/web
 kind load docker-image odp/ranger-admin:2.4.0      # or push to your registry
+kind load docker-image odp/jupyterhub:latest
 kind load docker-image odp/console-api:latest
 kind load docker-image odp/console-web:latest
 helm install odp platform/umbrella \
-  --set ranger.enabled=true --set console.enabled=true --set console-web.enabled=true
+  --set ranger.enabled=true --set jupyterhub.enabled=true \
+  --set console.enabled=true --set console-web.enabled=true
 ```
 
 The lakehouse (MinIO + Iceberg REST + Trino) + SDX (Atlas, Ranger) + the

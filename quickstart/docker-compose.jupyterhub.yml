@@ -1,0 +1,30 @@
+# ───────────────────────────────────────────────────────────────
+# JupyterHub — multi-user notebooks (≈ Cloudera ML)
+#
+# Standalone: a hub where users log in (dummy auth) and get a JupyterLab.
+# The MLflow tracking server (docker-compose.services.yml) is the other half
+# of the CML experience.
+#
+# Run it on its own:
+#   docker compose -f docker-compose.jupyterhub.yml up -d --build
+#   ../platform/ml/jupyterhub/smoke.sh
+#
+#   Hub UI : http://localhost:8000   (any username / password "jupyter")
+# ───────────────────────────────────────────────────────────────
+
+name: odp-quickstart
+
+services:
+  jupyterhub:
+    build:
+      context: ../platform/ml/jupyterhub
+    image: odp/jupyterhub:latest
+    container_name: odp-jupyterhub
+    ports:
+      - "8000:8000"
+    networks:
+      - odp
+
+networks:
+  odp:
+    name: odp

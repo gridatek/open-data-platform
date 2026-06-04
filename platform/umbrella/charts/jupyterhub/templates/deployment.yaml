@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "jupyterhub.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "jupyterhub.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "jupyterhub.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: jupyterhub
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+          startupProbe:
+            httpGet:
+              path: /hub/api/
+              port: http
+            periodSeconds: {{ .Values.startup.periodSeconds }}
+            failureThreshold: {{ .Values.startup.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /hub/api/
+              port: http
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /hub/api/
+              port: http
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "jupyterhub.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http
+  selector:
+    {{- include "jupyterhub.selectorLabels" . | nindent 4 }}

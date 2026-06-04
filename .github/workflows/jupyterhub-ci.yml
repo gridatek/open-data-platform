@@ -1,0 +1,41 @@
+name: jupyterhub-ci
+
+# CML notebooks proof: build + start JupyterHub and confirm it can spawn a
+# single-user notebook server via the REST API.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "quickstart/docker-compose.jupyterhub.yml"
+      - "platform/ml/jupyterhub/**"
+      - ".github/workflows/jupyterhub-ci.yml"
+  pull_request:
+    paths:
+      - "quickstart/docker-compose.jupyterhub.yml"
+      - "platform/ml/jupyterhub/**"
+      - ".github/workflows/jupyterhub-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  jupyterhub-smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quickstart
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and start JupyterHub
+        run: docker compose -f docker-compose.jupyterhub.yml up -d --build
+
+      - name: Smoke — hub up + spawn a notebook server
+        run: bash ../platform/ml/jupyterhub/smoke.sh
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.jupyterhub.yml logs --no-color
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.jupyterhub.yml down -v
