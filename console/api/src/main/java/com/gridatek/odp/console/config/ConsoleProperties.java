@@ -9,7 +9,8 @@ import java.util.List;
 public record ConsoleProperties(
         List<ServiceEndpoint> services,
         Catalog catalog,
-        Ranger ranger
+        Ranger ranger,
+        K8s k8s
 ) {
     /** A data service the console probes for health. */
     public record ServiceEndpoint(String name, String health) {}
@@ -19,4 +20,11 @@ public record ConsoleProperties(
 
     /** Ranger admin whose policies the console reads. */
     public record Ranger(String url, String serviceName, String username, String password) {}
+
+    /**
+     * Kubernetes access for the service lifecycle (restart/scale). Off in the
+     * docker-compose laptop subset; the Helm deployment sets enabled=true and a
+     * namespace, and binds a ServiceAccount with the RBAC to patch Deployments.
+     */
+    public record K8s(boolean enabled, String namespace) {}
 }

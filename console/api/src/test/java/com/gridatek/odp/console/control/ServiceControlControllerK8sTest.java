@@ -3,33 +3,40 @@ package com.gridatek.odp.console.control;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Without Kubernetes (the docker-compose subset) there is no
- * {@link ServiceControlService} bean, so lifecycle actions return 501.
+ * With a {@link ServiceControlService} present (Kubernetes enabled), the
+ * controller delegates and returns 202 Accepted.
  */
 @WebMvcTest(ServiceControlController.class)
-class ServiceControlControllerTest {
+class ServiceControlControllerK8sTest {
 
     @Autowired
     MockMvc mvc;
 
+    @MockBean
+    ServiceControlService control;
+
     @Test
-    void restartIsNotImplementedWithoutKubernetes() throws Exception {
+    void restartDelegatesAndAccepts() throws Exception {
         mvc.perform(post("/api/services/trino/restart"))
-                .andExpect(status().isNotImplemented());
+                .andExpect(status().isAccepted());
+        verify(control).restart("trino");
     }
 
     @Test
-    void scaleIsNotImplementedWithoutKubernetes() throws Exception {
-        mvc.perform(post("/api/services/trino/scale")
+    void scaleDelegatesAndAccepts() throws Exception {
+        mvc.perform(post("/api/services/minio/scale")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"replicas\":2}"))
-                .andExpect(status().isNotImplemented());
+                        .content("{\"replicas\":3}"))
+                .andExpect(status().isAccepted());
+        verify(control).scale("minio", 3);
     }
 }

@@ -14,8 +14,8 @@ adds governance **writes** (edit Ranger policies).
 | `POST /api/policies`                         | **create** a policy (raw Ranger JSON body) |
 | `PUT  /api/policies/{id}`                    | **replace** a policy                       |
 | `POST /api/policies/{id}/enabled`            | **enable/disable** — `{"enabled":bool}`    |
-| `POST /api/services/{name}/restart`          | 501 — needs K8s (Phase 4b)                 |
-| `POST /api/services/{name}/scale`            | 501 — needs K8s (Phase 4b)                 |
+| `POST /api/services/{name}/restart`          | rolling-restart a Deployment (on K8s; else 501) |
+| `POST /api/services/{name}/scale`            | scale a Deployment — `{"replicas":N}` (on K8s; else 501) |
 | `GET  /actuator/health`                      | the console's own health                   |
 
 The headline Phase 4 action is `POST /api/policies/{id}/enabled` — toggling the
@@ -54,8 +54,10 @@ src/main/java/com/gridatek/odp/console/
 ├── health/      # /api/services — HTTP health probes
 ├── catalog/     # /api/catalog/** — Iceberg REST proxy
 ├── policy/      # /api/policies — Ranger REST proxy (read + write)
-└── control/     # /api/services/{name}/** — lifecycle stubs (501, Phase 4b)
+└── control/     # /api/services/{name}/** — restart/scale Deployments via the K8s API
 ```
 
 > Governance writes are live (CORS allows `GET/POST/PUT`). Service lifecycle
-> (provision/scale) is stubbed at 501 until the K8s integration lands in Phase 4b.
+> (restart/scale) runs against the Kubernetes API when `odp.k8s.enabled=true`
+> (set by the Helm deployment, with an RBAC'd ServiceAccount); in the
+> docker-compose subset there's no `ServiceControlService` bean, so it returns 501.

@@ -35,6 +35,19 @@ endpoints:
     ranger: http://ranger-admin:6080/login.jsp
     atlas: http://atlas:21000/api/atlas/admin/version
 
+# Service lifecycle (restart/scale) needs the Kubernetes API. The chart creates a
+# ServiceAccount + a Role/RoleBinding scoped to patch Deployments in this
+# namespace, and turns on odp.k8s.enabled in the API. Set rbac.create=false (and
+# k8s.enabled=false) for a read-only console.
+rbac:
+  create: true
+serviceAccount:
+  create: true
+  name: ""              # defaults to the chart fullname (console-api)
+k8s:
+  enabled: true
+  namespace: ""         # defaults to the release namespace
+
 resources:
   requests:
     cpu: 100m

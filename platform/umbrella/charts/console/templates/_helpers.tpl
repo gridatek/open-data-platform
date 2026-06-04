@@ -21,3 +21,8 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version }}
 app.kubernetes.io/name: {{ include "console.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
+
+{{/* ServiceAccount name (override, else the fullname). */}}
+{{- define "console.serviceAccountName" -}}
+{{- default (include "console.fullname" .) .Values.serviceAccount.name -}}
+{{- end -}}

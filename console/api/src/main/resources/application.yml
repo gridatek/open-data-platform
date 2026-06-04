@@ -20,6 +20,11 @@ odp:
     service-name: ${ODP_RANGER_SERVICE_NAME:trino-odp}
     username: ${ODP_RANGER_USERNAME:admin}
     password: ${ODP_RANGER_PASSWORD:rangerR0cks!}
+  # Kubernetes access for restart/scale. Off by default (docker-compose subset);
+  # the Helm deployment sets enabled=true + the namespace and binds an RBAC'd SA.
+  k8s:
+    enabled: ${ODP_K8S_ENABLED:false}
+    namespace: ${ODP_K8S_NAMESPACE:default}
   services:
     - name: minio
       health: ${ODP_HEALTH_MINIO:http://localhost:9000/minio/health/live}
