@@ -80,9 +80,9 @@ flowchart TB
 ```
 
 > This is the **target** shape. Already running: the SDX layer (catalog, Ranger, Atlas,
-> Iceberg), Spark + Airflow, Trino, NiFi + Kafka, Superset, MLflow, and the console.
-> Not in the running stack yet: JupyterHub (today CML is MLflow + Spark/Jupyter notebooks)
-> and the Operational DB (HBase + Phoenix). See §5 for the per-phase status.
+> Iceberg), Spark + Airflow, Trino, NiFi + Kafka, Superset, MLflow, the Operational DB
+> (HBase + Phoenix), and the console. Not in the running stack yet: only JupyterHub (today
+> CML is MLflow + Spark/Jupyter notebooks). See §5 for the per-phase status.
 
 ---
 
@@ -98,17 +98,17 @@ flowchart TB
 | CDW — Data Warehouse            | Trino + Iceberg (or Impala)             |
 | CDF — Data Flow / streaming     | NiFi + Kafka                            |
 | Cloudera AI / CML               | JupyterHub † + MLflow                   |
-| Operational Database            | HBase + Phoenix †                       |
+| Operational Database            | HBase + Phoenix                         |
 | Data Visualization              | Apache Superset                         |
-| Cluster orchestration / runtime | Kubernetes (Minikube/Kind) + Helm †     |
+| Cluster orchestration / runtime | Kubernetes (Minikube/Kind) + Helm       |
 | Cloudera Manager / Mgmt Console | **custom Angular + Spring Boot console**|
 
 The console row is the part only you can build well — it's what makes this a *platform*
 project and not "another docker-compose lakehouse".
 
-> † Target stack; not in the running build yet. Today CML is **MLflow** (with Spark/Jupyter
-> notebooks) and the Operational DB is a scaffold. Everything else runs on both
-> docker-compose and the umbrella Helm chart on Kubernetes. See §5 for status.
+> † Today CML is **MLflow** (with Spark/Jupyter notebooks); JupyterHub is the one
+> not-yet-shipped piece. Everything else runs on both docker-compose and the umbrella Helm
+> chart on Kubernetes. See §5 for status.
 
 ---
 
@@ -128,7 +128,7 @@ open-data-platform/
 │   ├── warehouse/         # Trino + Iceberg       (scaffold — Trino cfg in quickstart/)
 │   ├── flow/              # NiFi + Kafka          (scaffold)
 │   ├── ml/                # MLflow helpers        (≈ CML)
-│   ├── opdb/              # HBase + Phoenix       (scaffold — not yet built)
+│   ├── opdb/              # HBase + Phoenix smoke (opdb-ci; overlay + subchart)
 │   ├── viz/               # Superset config
 │   └── umbrella/          # umbrella Helm chart — the full K8s deploy (helm-ci + kind-ci)
 ├── console/               # control plane (≈ Cloudera Manager)
@@ -152,7 +152,7 @@ Build the platform incrementally; each phase is independently usable and demoabl
 **docker-compose laptop subset of every phase below is implemented and proven in CI** — each
 row maps to a workflow in [`.github/workflows`](.github/workflows/) that brings the stack up
 and asserts the behaviour end to end. The whole platform now also deploys on Kubernetes via
-the umbrella Helm chart; only the Operational DB is still a scaffold (see notes under the table).
+the umbrella Helm chart (see the note under the table).
 
 | Phase | What it adds | Status | Proven by |
 |-------|--------------|--------|-----------|
@@ -165,15 +165,18 @@ the umbrella Helm chart; only the Operational DB is still a scaffold (see notes 
 
 **Kubernetes/Helm path** — done. The umbrella chart deploys the whole platform: every
 docker-compose service is either an upstream chart (MinIO/Trino/Superset/Airflow) or a local
-subchart (`iceberg-rest`, `atlas`, `ranger`, `kafka`, `nifi`, `mlflow`, `console`). `helm-ci`
-lints + templates it; **`kind-ci` stands up the lakehouse on a real (kind) cluster and runs a
-Trino write/read round-trip**. The SDX layer (Iceberg REST + Ranger + Atlas) was also validated
-live on kind. `ranger` and `console` default off (their images are built locally, not
-published); `atlas` is heavy (~3Gi) and can be disabled. See [`platform/umbrella`](platform/umbrella/).
+subchart (`iceberg-rest`, `atlas`, `ranger`, `kafka`, `nifi`, `mlflow`, `console`, `opdb`).
+`helm-ci` lints + templates it; **`kind-ci` stands up the lakehouse on a real (kind) cluster
+and runs a Trino write/read round-trip**. The SDX layer (Iceberg REST + Ranger + Atlas) was
+also validated live on kind. `ranger` and `console` default off (their images are built
+locally, not published); `atlas` is heavy (~3Gi) and can be disabled. See
+[`platform/umbrella`](platform/umbrella/).
+
+The **Operational DB** (HBase + Phoenix) runs standalone as its own overlay, proven by a
+Phoenix SQL round-trip in `opdb-ci`, and ships as the `opdb` subchart.
 
 **Still in progress**
 
-- **Operational DB (HBase + Phoenix).** Still a scaffold; not yet wired up or tested.
 - **Console — web + real lifecycle.** The Angular web has no Dockerfile/chart yet (it's
   dev-served), and the API's restart/scale endpoints are `501` stubs — wiring real
   provision/scale against the K8s API (with RBAC) is the remaining "Phase 4b" piece.
@@ -226,5 +229,5 @@ The platform now also deploys on **Kubernetes** via the umbrella Helm chart
 ([`platform/umbrella/`](platform/umbrella/)): every service is an upstream chart or a local
 subchart, `kind-ci` proves the lakehouse comes up on a real cluster and answers a Trino query,
 and the SDX layer (Iceberg REST + Ranger + Atlas) was validated live on kind. The open work is
-narrower now: the Operational DB (HBase + Phoenix), a Dockerfile + chart for the Angular console
-web, and real provision/scale (with RBAC) in the console API.
+narrow now: a Dockerfile + chart for the Angular console web, and real provision/scale (with
+RBAC) in the console API.
