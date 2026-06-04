@@ -1,0 +1,13 @@
+apiVersion: v2
+name: console
+description: >-
+  Open Data Platform console API — the control plane (≈ Cloudera Manager). Reads
+  service health, the Iceberg catalog, and Ranger policies over HTTP. Ported from
+  the docker-compose `console-api` service (Spring Boot).
+
+  NOTE: the image is built locally from console/api (no published image), so it
+  must be built and loaded into the cluster before enabling — see values / README.
+  Only the API is containerized today; the Angular web is dev-served.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

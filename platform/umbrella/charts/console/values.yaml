@@ -1,0 +1,43 @@
+# Console API — values. K8s port of the docker-compose `console-api` service.
+#
+# IMPORTANT: no published image — build & load it before enabling:
+#   docker build -t odp/console-api:latest console/api
+#   kind load docker-image odp/console-api:latest      # or push to a registry
+# That's why the umbrella leaves console.enabled=false by default.
+#
+# The API only makes HTTP calls (health/catalog/ranger), so it needs no K8s RBAC.
+enabled: true
+
+replicaCount: 1
+
+image:
+  repository: odp/console-api
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8090
+
+# Where the console reaches the rest of the platform. Defaults use the stable
+# in-cluster Service names the umbrella pins (trino via trino.fullnameOverride).
+endpoints:
+  catalogRestUrl: http://iceberg-rest:8181
+  ranger:
+    url: http://ranger-admin:6080
+    serviceName: trino-odp
+    username: admin
+    password: "rangerR0cks!"
+  health:
+    minio: http://minio:9000/minio/health/live
+    catalog: http://iceberg-rest:8181/v1/config
+    trino: http://trino:8080/v1/info
+    ranger: http://ranger-admin:6080/login.jsp
+    atlas: http://atlas:21000/api/atlas/admin/version
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 512Mi
