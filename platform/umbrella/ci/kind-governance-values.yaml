@@ -1,0 +1,81 @@
+# Adds the SDX governance layer to the kind smoke (on top of ci/kind-values.yaml):
+# Ranger + the Trino Ranger plugin, so a column-masking policy can be proven on a
+# real cluster. Mirrors platform/governance/trino/* (kept in sync by hand).
+#
+# Kept separate from the default umbrella values because enabling the Ranger
+# access control makes Trino *require* Ranger — fine here (ranger.enabled=true),
+# wrong for the open default lakehouse.
+
+ranger:
+  enabled: true
+
+# Leave headroom for Ranger on a CI runner (the governance stack is heavier).
+minio:
+  resources:
+    requests:
+      memory: 512Mi
+
+trino:
+  # Native Apache Ranger system access control (Trino >= 466).
+  accessControl:
+    type: properties
+    properties: |
+      access-control.name=ranger
+      ranger.service.name=trino-odp
+      ranger.plugin.config.resource=/etc/trino/ranger-trino-security.xml,/etc/trino/ranger-trino-audit.xml,/etc/trino/ranger-policymgr-ssl.xml
+  # The plugin config files, placed in /etc/trino on the coordinator (workers=0
+  # in CI, so the coordinator runs query tasks).
+  coordinator:
+    additionalConfigFiles:
+      ranger-trino-security.xml: |
+        <?xml version="1.0" encoding="UTF-8"?>
+        <configuration>
+          <property>
+            <name>ranger.plugin.trino.policy.rest.url</name>
+            <value>http://ranger-admin:6080</value>
+          </property>
+          <property>
+            <name>ranger.plugin.trino.access.cluster.name</name>
+            <value>odp</value>
+          </property>
+          <property>
+            <name>ranger.plugin.trino.use.rangerGroups</name>
+            <value>false</value>
+          </property>
+          <property>
+            <name>ranger.plugin.trino.use.only.rangerGroups</name>
+            <value>false</value>
+          </property>
+          <property>
+            <name>ranger.plugin.trino.super.users</name>
+            <value></value>
+          </property>
+          <property>
+            <name>ranger.plugin.trino.super.groups</name>
+            <value></value>
+          </property>
+          <property>
+            <name>ranger.plugin.trino.ugi.initialize</name>
+            <value>false</value>
+          </property>
+        </configuration>
+      ranger-trino-audit.xml: |
+        <?xml version="1.0" encoding="UTF-8"?>
+        <configuration>
+          <property>
+            <name>xasecure.audit.is.enabled</name>
+            <value>false</value>
+          </property>
+        </configuration>
+      ranger-policymgr-ssl.xml: |
+        <?xml version="1.0" encoding="UTF-8"?>
+        <configuration>
+          <property>
+            <name>xasecure.policymgr.clientssl.keystore</name>
+            <value></value>
+          </property>
+          <property>
+            <name>xasecure.policymgr.clientssl.truststore</name>
+            <value></value>
+          </property>
+        </configuration>

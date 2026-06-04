@@ -10,10 +10,12 @@ on:
     branches: [main]
     paths:
       - "platform/umbrella/**"
+      - "platform/governance/**"
       - ".github/workflows/kind-ci.yml"
   pull_request:
     paths:
       - "platform/umbrella/**"
+      - "platform/governance/**"
       - ".github/workflows/kind-ci.yml"
   workflow_dispatch:
 
@@ -67,3 +69,53 @@ jobs:
           kubectl -n odp logs -l app.kubernetes.io/name=trino --tail=120 --all-containers || true
           kubectl -n odp logs -l app.kubernetes.io/name=iceberg-rest --tail=120 || true
           kubectl -n odp logs -l app=minio --tail=120 || true
+
+  # The SDX masking proof on a real cluster: Ranger + the Trino Ranger plugin,
+  # then assert a column-mask policy hides a value from the analyst. Heavier —
+  # builds the Ranger admin image (the slow part) and stands up the governance
+  # stack. Runs in parallel with the lakehouse job above.
+  masking-on-kind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: odp
+
+      - name: Build and load the Ranger admin image
+        run: |
+          docker build -t odp/ranger-admin:2.4.0 platform/governance/ranger
+          kind load docker-image odp/ranger-admin:2.4.0 --name odp
+
+      - name: Add chart repos
+        run: |
+          helm repo add minio https://charts.min.io/
+          helm repo add trino https://trinodb.github.io/charts
+          helm repo add superset https://apache.github.io/superset
+          helm repo add apache-airflow https://airflow.apache.org
+          helm repo update
+
+      - name: Build chart dependencies
+        run: helm dependency build platform/umbrella
+
+      - name: Install the governance stack (lakehouse + Ranger + Trino plugin)
+        run: |
+          helm install odp platform/umbrella -n odp --create-namespace \
+            -f platform/umbrella/ci/kind-values.yaml \
+            -f platform/umbrella/ci/kind-governance-values.yaml \
+            --wait --timeout 12m
+
+      - name: Masking proof — admin sees the value, analyst sees it masked
+        run: NS=odp bash platform/governance/kind-masking-proof.sh
+
+      - name: Dump diagnostics on failure
+        if: failure()
+        run: |
+          kubectl -n odp get pods -o wide || true
+          kubectl -n odp describe pods || true
+          kubectl -n odp logs -l app.kubernetes.io/name=trino --tail=150 --all-containers || true
+          kubectl -n odp logs -l app.kubernetes.io/component=admin --tail=150 || true
+          kubectl -n odp logs -l app.kubernetes.io/name=ranger --tail=150 || true
