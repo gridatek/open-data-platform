@@ -1,0 +1,41 @@
+name: opdb-ci
+
+# Operational Database proof: bring up HBase + Phoenix and run a SQL round-trip
+# (create a Phoenix table, upsert rows, read one back).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "quickstart/docker-compose.opdb.yml"
+      - "platform/opdb/**"
+      - ".github/workflows/opdb-ci.yml"
+  pull_request:
+    paths:
+      - "quickstart/docker-compose.opdb.yml"
+      - "platform/opdb/**"
+      - ".github/workflows/opdb-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  opdb-smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quickstart
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start the Operational DB (HBase + Phoenix)
+        run: docker compose -f docker-compose.opdb.yml up -d
+
+      - name: Phoenix smoke — create table, upsert, select
+        run: bash ../platform/opdb/smoke.sh
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.opdb.yml logs --no-color
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.opdb.yml down -v

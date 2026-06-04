@@ -1,0 +1,29 @@
+# ───────────────────────────────────────────────────────────────
+# Operational Database — HBase + Phoenix (≈ CDP Operational Database)
+#
+# Standalone: a wide-column store (HBase) with a SQL layer (Phoenix). Not tied
+# to the lakehouse — it's the OLTP-ish counterpart to the analytic engines.
+#
+# Run it on its own:
+#   docker compose -f docker-compose.opdb.yml up -d
+#   ../platform/opdb/smoke.sh
+#
+#   Phoenix (thin JDBC / Query Server) : localhost:8765
+# ───────────────────────────────────────────────────────────────
+
+name: odp-quickstart
+
+services:
+  # All-in-one HBase 2.0 + Phoenix 5.0 (master + regionserver + ZK + Phoenix
+  # Query Server in one container). Laptop subset — single node, no auth.
+  opdb:
+    image: boostport/hbase-phoenix-all-in-one:2.0-5.0
+    container_name: odp-opdb
+    ports:
+      - "8765:8765"   # Phoenix Query Server (thin JDBC)
+    networks:
+      - odp
+
+networks:
+  odp:
+    name: odp
