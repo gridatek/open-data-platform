@@ -28,6 +28,7 @@ they're local subcharts under `charts/` — all now ported:
 | `nifi`          | ✅ done   | Flow authoring, plain HTTP/anonymous; `startupProbe` on `/nifi`. Default off. |
 | `mlflow`        | ✅ done   | Tracking server; SQLite metadata, artifacts in the MinIO `mlflow` bucket. Default off. |
 | `console`       | ✅ done¹  | Control-plane API (Spring Boot). Env points at the in-cluster Services (Trino pinned to `trino` via `fullnameOverride`). Locally-built image, default off. API only — the Angular web is dev-served. |
+| `opdb`          | ✅ done   | Operational DB — HBase + Phoenix all-in-one; Phoenix Query Server on `opdb:8765`. Default off (heavy, standalone). |
 
 ¹ `ranger` and `console` have no published image — they're built from
 `platform/governance/ranger` and `console/api`. **Build and load before

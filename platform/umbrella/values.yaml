@@ -128,3 +128,10 @@ mlflow:
 console:
   enabled: false
   fullnameOverride: console-api
+
+# ── Operational DB — HBase + Phoenix (local subchart) ────────
+# Public image, default off (heavy; standalone, not tied to the lakehouse).
+# Phoenix Query Server reachable at opdb:8765.
+opdb:
+  enabled: false
+  fullnameOverride: opdb

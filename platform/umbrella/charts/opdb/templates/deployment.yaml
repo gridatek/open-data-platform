@@ -1,0 +1,85 @@
+{{- if .Values.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "opdb.fullname" . }}
+  labels:
+    {{- include "opdb.labels" . | nindent 4 }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size }}
+  {{- with .Values.persistence.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+---
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "opdb.fullname" . }}
+  labels:
+    {{- include "opdb.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "opdb.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "opdb.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: opdb
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: phoenix
+              containerPort: {{ .Values.service.port }}
+          # HBase region assignment is slow; the startupProbe holds liveness off
+          # until the Phoenix Query Server port is accepting connections.
+          startupProbe:
+            tcpSocket:
+              port: phoenix
+            periodSeconds: {{ .Values.startup.periodSeconds }}
+            failureThreshold: {{ .Values.startup.failureThreshold }}
+          readinessProbe:
+            tcpSocket:
+              port: phoenix
+            periodSeconds: 15
+          livenessProbe:
+            tcpSocket:
+              port: phoenix
+            periodSeconds: 30
+          volumeMounts:
+            - name: data
+              mountPath: {{ .Values.persistence.mountPath }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: data
+        {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "opdb.fullname" . }}
+        {{- else }}
+          emptyDir: {}
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "opdb.fullname" . }}
+  labels:
+    {{- include "opdb.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: phoenix
+      port: {{ .Values.service.port }}
+      targetPort: phoenix
+  selector:
+    {{- include "opdb.selectorLabels" . | nindent 4 }}

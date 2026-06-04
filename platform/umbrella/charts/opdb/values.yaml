@@ -1,0 +1,35 @@
+# Operational Database (HBase + Phoenix) — values. K8s port of the docker-compose
+# `opdb` service. Single-node all-in-one container.
+enabled: true
+
+replicaCount: 1
+
+image:
+  repository: boostport/hbase-phoenix-all-in-one
+  tag: "2.0-5.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8765           # Phoenix Query Server (thin JDBC)
+
+# Standalone HBase writes under its tmp dir (default /tmp/hbase-<user>). Ephemeral
+# by default; enabling persistence mounts a PVC at that path. Real multi-dir
+# persistence would need a custom hbase-site.xml (follow-up).
+persistence:
+  enabled: false
+  size: 5Gi
+  mountPath: /tmp/hbase-root
+  # storageClass: ""
+
+# HBase is slow to assign regions; the startupProbe budgets for it.
+startup:
+  periodSeconds: 10
+  failureThreshold: 60
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 1Gi
+  limits:
+    memory: 2Gi
