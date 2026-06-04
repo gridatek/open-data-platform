@@ -20,6 +20,12 @@ minio:
       policy: none
     - name: mlflow
       policy: none
+  # The minio chart requests 16Gi by default (production sizing) — too large to
+  # schedule on a laptop/kind node. Standalone dev MinIO is light; cap it.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 1Gi
 
 # ── Iceberg REST catalog (SDX spine, local subchart) ─────────
 # fullnameOverride pins the Service to `iceberg-rest` so Trino/Spark reach it at
