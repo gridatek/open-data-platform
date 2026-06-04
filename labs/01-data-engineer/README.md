@@ -16,12 +16,14 @@ write with one engine, read with another, one governed catalog.
 | 02 | [Maintain Iceberg tables](lab-02-iceberg-maintenance.md) | Schema evolution, snapshots, time travel, compaction |
 | 03 | [Orchestrate with Airflow](lab-03-airflow-orchestration.md) | DAGs: schedule, trigger, monitor a pipeline |
 | 04 | [Partitioning & upserts](lab-04-partitioning-upserts.md) | Hidden partitioning + `MERGE INTO` incremental loads |
+| 05 | [The operational counterpart (HBase + Phoenix)](lab-05-operational-db.md) | Random-access-by-key vs analytical scan — the operational DB |
 
 ## Prerequisites
 
 ```bash
 make core           # the lakehouse (Spark + Trino + catalog + MinIO)
 make services       # adds Airflow (for Lab 3)
+make opdb           # HBase + Phoenix (for Lab 5)
 cd quickstart       # labs run docker compose from here
 ```
 
