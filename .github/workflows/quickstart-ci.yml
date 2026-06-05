@@ -73,6 +73,9 @@ jobs:
           echo "row count after maintenance = $COUNT"
           test "$COUNT" = "4"
 
+      - name: Iceberg features (partitioning, MERGE upserts, schema evolution, time-travel)
+        run: bash ../platform/engineering/iceberg-features.sh
+
       - name: Dump logs on failure
         if: failure()
         run: docker compose logs --no-color
