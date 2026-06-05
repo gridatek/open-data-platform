@@ -120,6 +120,16 @@ trino:
       s3.region=us-east-1
       s3.path-style-access=true
 
+# ── App session secret keys (Superset + Airflow) ────────────
+# One Secret (templates/app-secret-keys-secret.yaml) for the Flask/session secret
+# keys, read by Superset (extraEnvRaw) and Airflow (apiSecretKeySecretName).
+# Override before using for real.
+appSecretKeys:
+  create: true
+  secretName: odp-app-secret-keys
+  supersetSecretKey: "odp-dev-secret-change-me"
+  airflowApiSecretKey: "odp-dev-airflow-secret"
+
 # ── BI / viz — Apache Superset (upstream chart) ──────────────
 # Default OFF (heavy: web + Celery worker + Redis + its own Postgres). Now fully
 # wired, so `--set superset.enabled=true` is enough:
@@ -133,9 +143,14 @@ superset:
     repository: ghcr.io/gridatek/superset
     tag: latest
     pullPolicy: IfNotPresent
-  # SECRET_KEY for sessions/CSRF (CSRF is on by default in the stock config).
-  extraSecretEnv:
-    SUPERSET_SECRET_KEY: "odp-dev-secret-change-me"
+  # SECRET_KEY for sessions/CSRF (CSRF is on by default in the stock config),
+  # sourced from the shared app-secret-keys Secret instead of inline plaintext.
+  extraEnvRaw:
+    - name: SUPERSET_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: odp-app-secret-keys
+          key: superset-secret-key
   # Single-process: no Redis (disabled below), so point the caches + the SQL Lab
   # results backend at in-process stores instead of the chart's Redis defaults —
   # otherwise even a synchronous SQL Lab query fails trying to reach Redis.
@@ -223,8 +238,10 @@ airflow:
   # the api-server manages its own admin credential.
   createUserJob:
     enabled: false
-  # Static dev key so Helm doesn't rotate the webserver secret on every upgrade.
-  webserverSecretKey: "odp-dev-airflow-secret"
+  # Airflow 3 signs sessions with AIRFLOW__API__SECRET_KEY; source it from the
+  # shared app-secret-keys Secret (key api-secret-key) so it's not inline and
+  # doesn't auto-rotate (randAlphaNum) on every helm upgrade.
+  apiSecretKeySecretName: odp-app-secret-keys
   # Metadata store is the chart's bundled Postgres (postgresql.enabled, default on).
   # Distinct name so it doesn't collide with Superset's `<release>-postgresql`.
   postgresql:
