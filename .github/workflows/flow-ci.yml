@@ -1,0 +1,32 @@
+name: flow-ci
+
+# Data Flow: bring up NiFi and prove it builds + runs an automated flow through
+# the REST API (the compose counterpart of the platform's CDF tier).
+on:
+  push:
+    branches: [main]
+    paths: ["platform/flow/**", "quickstart/**", ".github/workflows/flow-ci.yml"]
+  pull_request:
+    paths: ["platform/flow/**", "quickstart/**", ".github/workflows/flow-ci.yml"]
+  workflow_dispatch:
+
+jobs:
+  nifi-flow:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quickstart
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create .env from example
+        run: cp .env.example .env
+      - name: Start NiFi
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml up -d nifi
+      - name: Build + run an automated flow via the REST API
+        run: NIFI_URL=http://localhost:8095 bash ../platform/flow/nifi-flow.sh
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml logs --no-color nifi
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml down -v
