@@ -22,9 +22,14 @@ service:
   type: ClusterIP
   port: 21000
 
-# Basic-auth creds Atlas ships with; used to build the health-probe header.
-# Override in any real cluster.
+# Basic-auth creds Atlas ships with; used by the health probes (wget). Preferred:
+# read them from an existing Secret (the umbrella points this at the shared
+# `odp-atlas-credentials`); the plaintext user/password below are the fallback
+# for standalone dev use.
 auth:
+  existingSecret: ""
+  userSecretKey: user
+  passwordSecretKey: password
   user: admin
   password: admin
 

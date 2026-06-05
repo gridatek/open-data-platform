@@ -1,0 +1,23 @@
+# Overrides for the atlas-on-kind job. Atlas is standalone (SDX lineage), so skip
+# the lakehouse to keep the job light, and enable just Atlas. Proves it comes up
+# and its health probes authenticate with creds from the shared Secret.
+minio:
+  enabled: false
+iceberg-rest:
+  enabled: false
+trino:
+  enabled: false
+ranger:
+  enabled: false
+console:
+  enabled: false
+console-web:
+  enabled: false
+jupyterhub:
+  enabled: false
+atlas:
+  enabled: true
+  # Embedded HBase + Solr boot is slow; give the startup probe ~15min on a runner.
+  startup:
+    periodSeconds: 10
+    failureThreshold: 90

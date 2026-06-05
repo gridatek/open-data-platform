@@ -65,15 +65,25 @@ spark:
   s3:
     existingSecret: odp-s3-credentials
 
+# ── Shared Atlas credential ──────────────────────────────────
+# One Secret (templates/atlas-credentials-secret.yaml) for the Atlas admin creds
+# the health probes use. (These are the image's built-in admin user; override
+# both here and in the image for a real deployment.)
+atlasCredentials:
+  create: true
+  secretName: odp-atlas-credentials
+  user: admin
+  password: admin
+
 # ── SDX lineage — Apache Atlas (local subchart) ──────────────
 # Heavy (embedded HBase + Solr, ~3Gi, slow to start). Disable on small clusters
 # with --set atlas.enabled=false. Stable Service name `atlas` for register-lineage.
 atlas:
   enabled: true
   fullnameOverride: atlas
+  # Health-probe creds come from the shared Secret (keys user/password).
   auth:
-    user: admin
-    password: admin
+    existingSecret: odp-atlas-credentials
 
 # ── Query engine ─────────────────────────────────────────────
 # fullnameOverride pins the Services to `trino` / `trino-worker` so the console
