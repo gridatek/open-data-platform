@@ -150,6 +150,9 @@ jobs:
       - name: Log a run and read it back
         run: bash ../platform/ml/log-run.sh
 
+      - name: Register a model in the MLflow Model Registry
+        run: bash ../platform/ml/register-model.sh
+
       - name: Dump logs on failure
         if: failure()
         run: docker compose -f docker-compose.yml -f docker-compose.services.yml logs --no-color mlflow mlflow-init
