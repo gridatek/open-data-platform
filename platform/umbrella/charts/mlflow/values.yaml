@@ -20,6 +20,12 @@ s3:
   endpoint: http://minio:9000
   region: us-east-1
   bucket: mlflow
+  # Preferred: read creds from an existing Secret (the umbrella points this at the
+  # shared `odp-s3-credentials`). Key names default to rootUser/rootPassword.
+  existingSecret: ""
+  accessKeySecretKey: rootUser
+  secretKeySecretKey: rootPassword
+  # Fallback plaintext creds when existingSecret is empty (standalone dev only).
   accessKey: admin
   secretKey: password
 
@@ -30,6 +36,10 @@ db:
     tag: "15"
     pullPolicy: IfNotPresent
   user: mlflow
+  # Preferred: read the password from an existing Secret (umbrella → the shared
+  # `odp-mlflow-credentials`). The username isn't sensitive, so it stays inline.
+  existingSecret: ""
+  passwordSecretKey: dbPassword
   password: mlflow
   name: mlflow
   service:

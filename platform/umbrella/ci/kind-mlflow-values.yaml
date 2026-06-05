@@ -1,0 +1,10 @@
+# Overrides for the mlflow-on-kind job. MLflow needs MinIO (artifact bucket) but
+# not the rest of the lakehouse, so keep minio and disable iceberg-rest/trino.
+# Proves MLflow comes up with its S3 + backend-store creds from Secrets and can
+# log/read a run.
+iceberg-rest:
+  enabled: false
+trino:
+  enabled: false
+mlflow:
+  enabled: true

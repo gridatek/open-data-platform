@@ -240,6 +240,17 @@ airflow:
       ref: main
       subPath: platform/engineering/airflow/dags
 
+# ── Shared Ranger credential ─────────────────────────────────
+# One Secret (templates/ranger-credentials-secret.yaml) for the Ranger admin
+# password (used by Ranger and the console) + the Ranger DB user/password (used
+# by the Ranger admin and its Postgres). Override these before using for real.
+rangerCredentials:
+  create: true
+  secretName: odp-ranger-credentials
+  adminPassword: "rangerR0cks!"
+  dbUser: rangeradmin
+  dbPassword: rangeradmin
+
 # ── SDX policies — Apache Ranger + its Postgres (local subchart) ──
 # Default ON: the admin image is published to GHCR (publish-images.yml) and the
 # chart points at it — make the package public (or add an imagePullSecret) to pull.
@@ -248,12 +259,20 @@ airflow:
 ranger:
   enabled: true
   fullnameOverride: ranger
-  admin:
-    password: "rangerR0cks!"
+  # admin password + DB creds come from the shared Secret (keys adminPassword,
+  # dbUser, dbPassword).
+  credentials:
+    existingSecret: odp-ranger-credentials
   db:
-    user: rangeradmin
-    password: rangeradmin
     name: ranger
+
+# ── MLflow backend-store credential ──────────────────────────
+# One Secret (templates/mlflow-credentials-secret.yaml) for the MLflow Postgres
+# password. Override before using for real.
+mlflowCredentials:
+  create: true
+  secretName: odp-mlflow-credentials
+  dbPassword: mlflow
 
 # ── Streaming + ML tier (local subcharts) ───────────────────
 # Public images, so they "just work" — but default OFF to keep the base install
@@ -268,12 +287,15 @@ nifi:
 mlflow:
   enabled: false
   fullnameOverride: mlflow
+  # S3 artifact creds from the shared Secret; the backend-store Postgres password
+  # from the mlflow Secret below.
   s3:
     endpoint: http://minio:9000
     region: us-east-1
     bucket: mlflow
-    accessKey: admin
-    secretKey: password
+    existingSecret: odp-s3-credentials
+  db:
+    existingSecret: odp-mlflow-credentials
 # JupyterHub (≈ CML notebooks). Image published to GHCR; default on.
 jupyterhub:
   enabled: true
@@ -285,6 +307,11 @@ jupyterhub:
 console:
   enabled: true
   fullnameOverride: console-api
+  # The Ranger admin password it uses to call the Ranger API comes from the
+  # shared Secret (key adminPassword), same as the ranger subchart.
+  endpoints:
+    ranger:
+      existingSecret: odp-ranger-credentials
 
 # ── Control plane — console web UI (Angular + nginx, local subchart) ──
 # Default ON: image published to GHCR. Needs the console API (nginx proxies
