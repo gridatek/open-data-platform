@@ -71,13 +71,37 @@ services:
     networks:
       - odp
 
+  # ── Airflow metadata DB (Postgres) ──────────────────────────
+  airflow-db:
+    image: postgres:15
+    container_name: odp-airflow-db
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - odp
+
   # ── Airflow: orchestration (≈ CDE). Single-process standalone for the laptop. ──
   airflow:
     image: apache/airflow:2.10.4
     container_name: odp-airflow
+    depends_on:
+      airflow-db:
+        condition: service_healthy
     environment:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      # Postgres metadata store → LocalExecutor (SequentialExecutor only existed
+      # because SQLite can't do concurrent writes).
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
     volumes:
       - ../platform/engineering/airflow/dags:/opt/airflow/dags:ro
       - airflow-home:/opt/airflow
@@ -201,4 +225,5 @@ volumes:
   superset-home:
   superset-db-data:
   airflow-home:
+  airflow-db-data:
   mlflow-db-data:
