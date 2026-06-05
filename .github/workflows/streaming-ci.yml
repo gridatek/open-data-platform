@@ -1,0 +1,58 @@
+name: streaming-ci
+
+# Data Flow → lakehouse: produce events to Kafka, run the Spark Structured
+# Streaming ingest, and assert the rows land in the governed Iceberg table
+# (read back through Trino). The streaming counterpart of the batch seed.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "quickstart/**"
+      - "platform/flow/**"
+      - ".github/workflows/streaming-ci.yml"
+  pull_request:
+    paths:
+      - "quickstart/**"
+      - "platform/flow/**"
+      - ".github/workflows/streaming-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  kafka-to-iceberg:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quickstart
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create .env from example
+        run: cp .env.example .env
+
+      - name: Start Kafka + Spark + the lakehouse (Trino)
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml up -d kafka spark trino
+
+      - name: Wait for the Kafka broker
+        run: |
+          for i in $(seq 1 40); do
+            docker compose exec -T kafka /opt/kafka/bin/kafka-topics.sh \
+              --bootstrap-server localhost:9092 --list >/dev/null 2>&1 && exit 0
+            echo "waiting for Kafka ($i)..."; sleep 5
+          done; exit 1
+
+      - name: Wait for Trino
+        run: |
+          for i in $(seq 1 40); do
+            docker compose exec -T trino trino --execute 'SELECT 1' >/dev/null 2>&1 && exit 0
+            echo "waiting for Trino ($i)..."; sleep 5
+          done; exit 1
+
+      - name: Kafka -> Iceberg -> Trino proof
+        run: bash ../platform/flow/kafka-to-iceberg.sh
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml logs --no-color kafka spark trino | tail -200
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml down -v
