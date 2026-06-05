@@ -91,6 +91,17 @@ superset:
   # SECRET_KEY for sessions/CSRF (CSRF is on by default in the stock config).
   extraSecretEnv:
     SUPERSET_SECRET_KEY: "odp-dev-secret-change-me"
+  # Single-process: no Redis (disabled below), so point the caches + the SQL Lab
+  # results backend at in-process stores instead of the chart's Redis defaults —
+  # otherwise even a synchronous SQL Lab query fails trying to reach Redis.
+  configOverrides:
+    no_redis: |
+      from cachelib.file import FileSystemCache
+      RESULTS_BACKEND = FileSystemCache("/tmp/superset_results", default_timeout=86400)
+      CACHE_CONFIG = {"CACHE_TYPE": "SimpleCache"}
+      DATA_CACHE_CONFIG = {"CACHE_TYPE": "SimpleCache"}
+      FILTER_STATE_CACHE_CONFIG = {"CACHE_TYPE": "SimpleCache"}
+      EXPLORE_FORM_DATA_CACHE_CONFIG = {"CACHE_TYPE": "SimpleCache"}
   # The init job imports any import_datasources.yaml found at the config mount,
   # so the governed Trino catalog is registered out of the box.
   extraConfigs:
@@ -103,8 +114,12 @@ superset:
   # Celery worker/beat + bundled Redis also sidesteps a cross-subchart Sprig
   # `merge` context bug that breaks rendering when Superset's Redis and Airflow's
   # helpers are templated together. Sync SQL Lab queries don't need a worker.
+  # The chart always renders the Celery worker (it has no enable flag), so scale
+  # it to zero for a single-process Superset; beat is off by chart default. Sync
+  # SQL Lab queries need neither, and Redis is disabled below.
   supersetWorker:
-    enabled: false
+    replicas:
+      replicaCount: 0
   supersetCeleryBeat:
     enabled: false
   redis:

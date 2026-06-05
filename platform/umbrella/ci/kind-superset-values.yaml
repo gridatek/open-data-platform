@@ -1,0 +1,14 @@
+# Overrides for the superset-on-kind job — layered on top of kind-values.yaml.
+# Re-enable Superset (kind-values turns it off for the lakehouse smoke) and size
+# it for a GitHub runner. Proves the umbrella's Superset path — our Trino-dialect
+# image, metadata in the bundled Postgres, the Trino connection seeded at init —
+# can query the governed Iceberg table through Trino on a real cluster.
+superset:
+  enabled: true
+  # Trim the web node so it co-schedules next to Trino on one runner node.
+  supersetNode:
+    resources:
+      requests: { cpu: 100m, memory: 512Mi }
+  init:
+    resources:
+      requests: { cpu: 100m, memory: 384Mi }
