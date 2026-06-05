@@ -32,6 +32,8 @@ run, and asserts it reads back. CI runs this in `.github/workflows/services-ci.y
   published to GHCR) — no cold-start `pip install`.
 - Metadata is in **Postgres** and artifacts in **MinIO** — both production-shaped.
   (The umbrella `mlflow` subchart ships its own Postgres, like `ranger`.)
-- The proof logs metadata via REST; it doesn't yet upload an artifact through
-  the MinIO path. Logging a model from a notebook (`mlflow.log_artifact`) is the
-  next step.
+- The Postgres backend store enables the **Model Registry**:
+  `register-model.sh` registers a model + version through the REST API, tags it
+  with a `champion` alias, and reads it back (run in `services-ci`'s `mlflow-track`
+  job). Real model **serving** (`mlflow models serve` behind an inference
+  endpoint) is the remaining step.
