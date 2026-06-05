@@ -1,25 +1,23 @@
-"""Superset config for the Open Data Platform laptop subset.
+"""Superset config for the Open Data Platform.
 
-Minimal single-process setup: SQLite metadata DB, CSRF off so the REST API is
-easy to drive from scripts/CI. Not for anything beyond local/dev use.
+Metadata in Postgres (the `superset-db` service / the umbrella's superset-db),
+CSRF on. Talisman (HTTPS/CSP headers) stays off since the laptop subset is plain
+HTTP. Not hardened beyond that (no Redis cache / Celery worker).
 """
 import os
 
 SECRET_KEY = os.environ.get("SUPERSET_SECRET_KEY", "odp-dev-secret-change-me")
 
-# Superset's own metadata DB (not the lakehouse). SQLite is fine single-process.
-SQLALCHEMY_DATABASE_URI = "sqlite:////app/superset_home/superset.db"
+# Superset's own metadata DB (not the lakehouse). Postgres — production-shaped,
+# and thread-safe (unlike SQLite, which choked SQL Lab's worker threads).
+SQLALCHEMY_DATABASE_URI = os.environ.get(
+    "SUPERSET_DATABASE_URI",
+    "postgresql://superset:superset@superset-db:5432/superset",
+)
 
-# SQL Lab runs each query in a worker thread, but SQLite connections are bound to
-# the thread that created them by default — which makes Superset's reads of its
-# own metadata (the `dbs` table) blow up with "SQLite objects created in a thread
-# can only be used in that same thread". Allow the connection to cross threads.
-SQLALCHEMY_ENGINE_OPTIONS = {
-    "connect_args": {"check_same_thread": False},
-}
-
-# Dev conveniences: let scripts/CI hit the API without CSRF dance.
-WTF_CSRF_ENABLED = False
+# CSRF protection on (real-deployment default). Talisman off: the laptop subset
+# serves plain HTTP, so HTTPS-enforcing headers would break it.
+WTF_CSRF_ENABLED = True
 TALISMAN_ENABLED = False
 
 FEATURE_FLAGS = {

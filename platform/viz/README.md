@@ -6,8 +6,8 @@ another consumer of the shared data layer.
 
 ```
 viz/
-├── superset/Dockerfile           # apache/superset + the Trino dialect (→ GHCR)
-├── superset/superset_config.py   # SQLite metadata, CSRF off (laptop subset)
+├── superset/Dockerfile           # apache/superset + Trino dialect + psycopg2 (→ GHCR)
+├── superset/superset_config.py   # Postgres metadata, CSRF on
 └── register-trino.sh             # add Trino as a Superset DB + run a proof query
 ```
 
@@ -24,11 +24,15 @@ docker compose exec spark spark-submit /home/iceberg/jobs/seed_lakehouse.py
 Superset UI: http://localhost:8088 (admin / admin). The script registers the
 `trino://admin@trino:8080/iceberg` connection and runs
 `SELECT count(*) FROM iceberg.smoke.events` via SQL Lab, asserting it returns 4.
-CI runs this in `.github/workflows/services-ci.yml`.
+Because CSRF is on, the script first fetches a CSRF token and sends it (with the
+session cookie + a `Referer`) on the state-changing POSTs. CI runs this in
+`.github/workflows/services-ci.yml`.
+
+Metadata lives in a `superset-db` Postgres (the `dbs`, dashboards, etc. survive a
+`superset` container restart). The Postgres + Trino drivers are baked into the
+image, so there's no cold-start `pip install`.
 
 ## ⚠️ Rough edges
 
-- The Trino dialect is now **baked into a custom image** (`Dockerfile`,
-  published to GHCR), so it's present at start — no cold-start `pip install`.
-- SQLite metadata + CSRF disabled are still **dev-only**. A real deployment uses
-  Postgres + Redis + a worker, and keeps CSRF on.
+- Still **single-process**: a real deployment adds Redis + a Celery worker for
+  async SQL Lab and caching. The metadata store is already Postgres and CSRF is on.
