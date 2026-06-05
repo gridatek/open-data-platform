@@ -41,6 +41,7 @@ they're local subcharts under `charts/` — all now ported:
 | Local subchart  | Status   | Notes |
 |-----------------|----------|-------|
 | `iceberg-rest`  | ✅ done   | The SDX catalog spine. Trino's `iceberg` catalog is wired to it via `additionalCatalogs`; MinIO is pinned to a stable Service name so the catalog resolves it. |
+| `spark`         | ✅ done   | spark-iceberg runtime (Jupyter + spark-submit/spark-sql, local mode). Its `demo` catalog points at `iceberg-rest` + `minio`, so Spark writes the same tables Trino/Superset read. `kind-ci` writes through Spark and reads it back via Trino. Heavy — default off. |
 | `atlas`         | ✅ done   | SDX lineage. Single container (embedded HBase + Solr), pinned by digest; `startupProbe` tolerates the slow boot. Heavy (~3Gi) — `--set atlas.enabled=false` to skip. |
 | `ranger`        | ✅ done¹  | Policy server + UI **and** its Postgres metadata store (admin Deployment + db Deployment/Service/PVC). Stable Service names `ranger-admin` / `ranger-db`. |
 | `kafka`         | ✅ done   | Single-node KRaft broker; advertised listener uses the stable `kafka` Service name. Default off. |

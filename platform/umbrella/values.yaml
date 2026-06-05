@@ -41,6 +41,15 @@ iceberg-rest:
     accessKey: admin
     secretKey: password
 
+# ── Spark engine over the shared catalog (local subchart) ────
+# The K8s port of the compose `spark` service. Heavy + interactive, so default
+# OFF — enable with `--set spark.enabled=true`. Its `demo` catalog points at the
+# iceberg-rest + minio Services above, so Spark writes the same tables Trino and
+# Superset read. Stable Service name `spark`.
+spark:
+  enabled: false
+  fullnameOverride: spark
+
 # ── SDX lineage — Apache Atlas (local subchart) ──────────────
 # Heavy (embedded HBase + Solr, ~3Gi, slow to start). Disable on small clusters
 # with --set atlas.enabled=false. Stable Service name `atlas` for register-lineage.

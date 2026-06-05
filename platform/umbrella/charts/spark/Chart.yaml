@@ -1,0 +1,11 @@
+apiVersion: v2
+name: spark
+description: >-
+  Apache Spark (spark-iceberg runtime) — the K8s port of the docker-compose
+  `spark` service. Configured to read/write the shared Iceberg REST catalog +
+  MinIO, so the same governed tables are reachable from Spark, Trino and
+  Superset. Runs the Jupyter notebook server; spark-submit / spark-sql run in
+  local mode inside the pod.
+type: application
+version: 0.1.0
+appVersion: "latest"

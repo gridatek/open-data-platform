@@ -230,3 +230,48 @@ jobs:
           kubectl -n odp describe pods || true
           kubectl -n odp logs -l app.kubernetes.io/name=superset --tail=150 --all-containers || true
           kubectl -n odp logs -l app.kubernetes.io/name=trino --tail=120 --all-containers || true
+
+  # Compute engine on a real cluster: deploy the umbrella's Spark (spark-iceberg,
+  # its `demo` catalog wired to iceberg-rest + minio) next to the lakehouse, then
+  # write an Iceberg table through Spark and assert Trino reads the same table.
+  # Proves the Helm Spark wiring at runtime — Spark and Trino share the catalog.
+  spark-on-kind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: odp
+
+      - name: Add chart repos
+        run: |
+          helm repo add minio https://charts.min.io/
+          helm repo add trino https://trinodb.github.io/charts
+          helm repo add superset https://apache.github.io/superset
+          helm repo add apache-airflow https://airflow.apache.org
+          helm repo update
+
+      - name: Build chart dependencies
+        run: helm dependency build platform/umbrella
+
+      - name: Install the lakehouse + Spark
+        run: |
+          helm install odp platform/umbrella -n odp --create-namespace \
+            -f platform/umbrella/ci/kind-values.yaml \
+            -f platform/umbrella/ci/kind-spark-values.yaml \
+            --wait --timeout 12m
+
+      - name: Write Iceberg through Spark, read it through Trino
+        run: NS=odp bash platform/engineering/spark-on-kind.sh
+
+      - name: Dump diagnostics on failure
+        if: failure()
+        run: |
+          kubectl -n odp get pods -o wide || true
+          kubectl -n odp describe pods || true
+          kubectl -n odp logs -l app.kubernetes.io/name=spark --tail=150 || true
+          kubectl -n odp logs -l app.kubernetes.io/name=iceberg-rest --tail=120 || true
+          kubectl -n odp logs -l app.kubernetes.io/name=trino --tail=120 --all-containers || true
