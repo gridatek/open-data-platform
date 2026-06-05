@@ -15,6 +15,10 @@ spec:
       labels:
         {{- include "mlflow.server.selectorLabels" . | nindent 8 }}
     spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       # mlflow server fails fast if the backend DB isn't reachable, so wait for it.
       initContainers:
         - name: wait-for-db

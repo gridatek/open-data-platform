@@ -4,6 +4,13 @@
 # Toggle each with <name>.enabled. Secrets here are placeholders — override with
 # --set or a sealed secret in any real cluster.
 
+# ── Global ───────────────────────────────────────────────────
+# Propagated to every subchart. Set imagePullSecrets to pull the private GHCR
+# images on a real cluster (see docs/production.md), e.g.
+#   --set global.imagePullSecrets[0].name=ghcr
+global:
+  imagePullSecrets: []
+
 # ── Object storage (the lakehouse foundation) ────────────────
 # ── Shared S3 / MinIO credential ─────────────────────────────
 # One Secret (templates/s3-credentials-secret.yaml) instead of the same
