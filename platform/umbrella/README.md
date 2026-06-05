@@ -24,8 +24,11 @@ Dependencies with **official upstream charts** are wired and version-pinned:
   `iceberg.smoke.events` out of the box. Run single-process (no Celery worker /
   Redis), matching the compose laptop subset.
 - **Airflow** runs the `LocalExecutor` on its bundled Postgres
-  (`airflow-postgresql`) — no Redis/workers — and ships the `lakehouse_smoke` DAG
-  via git-sync from this repo. `--set airflow.enabled=true`.
+  (`airflow-postgresql`) — no Redis/workers — uses our GHCR image (the chart's
+  Airflow 3.2.0 + the Trino provider) so the DAG's operators import, and ships the
+  `lakehouse_smoke` DAG via git-sync from this repo. The DAG writes/reads the
+  governed table through the in-cluster `trino` Service (`AIRFLOW_CONN_TRINO_DEFAULT`).
+  `--set airflow.enabled=true`.
 
 > Each bundles its own Postgres under a distinct `fullnameOverride` so they don't
 > collide on `<release>-postgresql`. `helm-ci` lint/templates the chart; these two

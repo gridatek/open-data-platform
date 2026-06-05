@@ -131,6 +131,16 @@ superset:
 airflow:
   enabled: false
   executor: LocalExecutor
+  # Our image (chart's Airflow 3.2.0 + the Trino provider baked in) so the
+  # git-synced lakehouse_smoke DAG's operators import.
+  images:
+    airflow:
+      repository: ghcr.io/gridatek/airflow
+      tag: "3.2.0"
+  # The DAG reads/writes the governed table through Trino (pinned `trino` Service).
+  env:
+    - name: AIRFLOW_CONN_TRINO_DEFAULT
+      value: trino://admin@trino:8080/iceberg
   # LocalExecutor runs tasks in the scheduler — no Celery broker needed.
   redis:
     enabled: false
