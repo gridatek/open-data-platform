@@ -46,9 +46,23 @@ spec:
               containerPort: 5432
           env:
             - name: POSTGRES_USER
+              {{- if .Values.credentials.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.credentials.existingSecret }}
+                  key: {{ .Values.credentials.dbUserKey }}
+              {{- else }}
               value: {{ .Values.db.user | quote }}
+              {{- end }}
             - name: POSTGRES_PASSWORD
+              {{- if .Values.credentials.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.credentials.existingSecret }}
+                  key: {{ .Values.credentials.dbPasswordKey }}
+              {{- else }}
               value: {{ .Values.db.password | quote }}
+              {{- end }}
             - name: POSTGRES_DB
               value: {{ .Values.db.name | quote }}
           readinessProbe:
