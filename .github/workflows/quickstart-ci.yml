@@ -64,6 +64,15 @@ jobs:
           echo "row count = $COUNT"
           test "$COUNT" = "4"
 
+      - name: Iceberg maintenance (compaction + snapshot expiry)
+        run: |
+          docker compose exec -T spark spark-submit /home/iceberg/jobs/maintain_lakehouse.py
+          # data must still be there + queryable after maintenance
+          COUNT=$(docker compose exec -T trino trino --execute \
+            "SELECT count(*) FROM iceberg.smoke.events;" | tr -d '"[:space:]')
+          echo "row count after maintenance = $COUNT"
+          test "$COUNT" = "4"
+
       - name: Dump logs on failure
         if: failure()
         run: docker compose logs --no-color
