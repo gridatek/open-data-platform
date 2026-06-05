@@ -1,0 +1,13 @@
+# Overrides for the console-on-kind job — layered on top of kind-values.yaml.
+# Re-enable the console API (kind-values turns it off for the lakehouse smoke);
+# console-web stays off (the proof drives the API directly). Proves the console
+# control plane — health, catalog browse, and scaling a Deployment via RBAC —
+# works on a real cluster.
+console:
+  enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 384Mi
+    limits:
+      memory: 768Mi
