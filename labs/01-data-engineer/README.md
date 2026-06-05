@@ -17,6 +17,7 @@ write with one engine, read with another, one governed catalog.
 | 03 | [Orchestrate with Airflow](lab-03-airflow-orchestration.md) | DAGs: schedule, trigger, monitor a pipeline |
 | 04 | [Partitioning & upserts](lab-04-partitioning-upserts.md) | Hidden partitioning + `MERGE INTO` incremental loads |
 | 05 | [The operational counterpart (HBase + Phoenix)](lab-05-operational-db.md) | Random-access-by-key vs analytical scan — the operational DB |
+| 06 | [Build & submit a Spark application](lab-06-spark-applications.md) | `spark-submit` a PySpark script **and** a compiled Java JAR (≈ a CDE job) |
 
 ## Prerequisites
 
