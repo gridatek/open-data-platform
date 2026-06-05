@@ -20,12 +20,21 @@ SQLA_URI="trino://admin@trino:8080/iceberg"
 echo "[superset] waiting for Superset at ${SUPERSET_URL} ..."
 until curl -sf "${SUPERSET_URL}/health" >/dev/null; do sleep 5; done
 
+JAR="$(mktemp)"
+trap 'rm -f "${JAR}"' EXIT
+
 echo "[superset] logging in"
-TOKEN=$(curl -sS -X POST "${SUPERSET_URL}/api/v1/security/login" \
+TOKEN=$(curl -sS -c "${JAR}" -X POST "${SUPERSET_URL}/api/v1/security/login" \
   -H 'Content-Type: application/json' \
   -d "{\"username\":\"${USER}\",\"password\":\"${PASS}\",\"provider\":\"db\",\"refresh\":true}" \
   | jq -r '.access_token')
 auth=(-H "Authorization: Bearer ${TOKEN}")
+
+# CSRF is enabled, so state-changing POSTs need a CSRF token (bound to the
+# session cookie) plus a Referer header. Fetch it once and reuse on each POST.
+CSRF=$(curl -sS -b "${JAR}" -c "${JAR}" "${auth[@]}" \
+  "${SUPERSET_URL}/api/v1/security/csrf_token/" | jq -r '.result')
+post=(-b "${JAR}" -H "X-CSRFToken: ${CSRF}" -H "Referer: ${SUPERSET_URL}/")
 
 # Find an existing 'trino-odp' database, else create it.
 echo "[superset] ensuring database '${DB_NAME}'"
@@ -34,7 +43,7 @@ DB_ID=$(curl -sS "${auth[@]}" \
   | jq -r '.result[0].id // empty')
 
 if [ -z "${DB_ID}" ]; then
-  DB_ID=$(curl -sS -X POST "${SUPERSET_URL}/api/v1/database/" "${auth[@]}" \
+  DB_ID=$(curl -sS -X POST "${SUPERSET_URL}/api/v1/database/" "${auth[@]}" "${post[@]}" \
     -H 'Content-Type: application/json' \
     -d "{\"database_name\":\"${DB_NAME}\",\"sqlalchemy_uri\":\"${SQLA_URI}\",\"expose_in_sqllab\":true}" \
     | jq -r '.id')
@@ -42,7 +51,7 @@ fi
 echo "[superset] database id = ${DB_ID}"
 
 echo "[superset] running query via SQL Lab"
-RESULT=$(curl -sS -X POST "${SUPERSET_URL}/api/v1/sqllab/execute/" "${auth[@]}" \
+RESULT=$(curl -sS -X POST "${SUPERSET_URL}/api/v1/sqllab/execute/" "${auth[@]}" "${post[@]}" \
   -H 'Content-Type: application/json' \
   -d "{\"database_id\":${DB_ID},\"schema\":\"smoke\",\"sql\":\"SELECT count(*) AS n FROM iceberg.smoke.events\",\"runAsync\":false}")
 echo "${RESULT}" | jq '.data // .'

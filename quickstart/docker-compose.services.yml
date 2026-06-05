@@ -15,14 +15,35 @@
 name: odp-quickstart
 
 services:
+  # ── Superset metadata DB (Postgres) ──────────────────────────
+  superset-db:
+    image: postgres:15
+    container_name: odp-superset-db
+    environment:
+      POSTGRES_USER: superset
+      POSTGRES_PASSWORD: superset
+      POSTGRES_DB: superset
+    volumes:
+      - superset-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U superset -d superset"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - odp
+
   # ── Superset: BI over the lakehouse via Trino (≈ CDW / Data Viz) ──
   superset:
     build:
       context: ../platform/viz/superset
-    image: ghcr.io/gridatek/superset:latest   # apache/superset + the Trino dialect
+    image: ghcr.io/gridatek/superset:latest   # apache/superset + Trino dialect + psycopg2
     container_name: odp-superset
     depends_on:
-      - trino
+      trino:
+        condition: service_started
+      superset-db:
+        condition: service_healthy
     environment:
       SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:-odp-dev-secret-change-me}
       SUPERSET_CONFIG_PATH: /app/superset_config.py
@@ -178,5 +199,6 @@ services:
 
 volumes:
   superset-home:
+  superset-db-data:
   airflow-home:
   mlflow-db-data:
