@@ -1,0 +1,67 @@
+name: spark-app-ci
+
+# Data Engineering: prove a Spark application can be built and submitted against
+# the governed lakehouse — both a PySpark job and a compiled Java JAR (≈ a CDE
+# Spark job). Backs data-engineer lab-06.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "quickstart/spark/**"
+      - ".github/workflows/spark-app-ci.yml"
+  pull_request:
+    paths:
+      - "quickstart/spark/**"
+      - ".github/workflows/spark-app-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  spark-submit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the Java app JAR (Maven)
+        run: |
+          docker run --rm -v "$PWD/quickstart/spark/apps/java":/app -w /app \
+            maven:3.9-eclipse-temurin-17 mvn -q -B package
+          ls -la quickstart/spark/apps/java/target/*.jar
+
+      - name: Start Spark + the lakehouse (Trino)
+        working-directory: quickstart
+        run: |
+          cp .env.example .env
+          docker compose up -d spark trino
+
+      - name: Wait for Trino
+        working-directory: quickstart
+        run: |
+          for i in $(seq 1 40); do
+            docker compose exec -T trino trino --execute 'SELECT 1' >/dev/null 2>&1 && exit 0
+            echo "waiting for Trino ($i)..."; sleep 5
+          done; exit 1
+
+      - name: Seed the demo table (PySpark app via spark-submit)
+        working-directory: quickstart
+        run: docker compose exec -T spark spark-submit /home/iceberg/jobs/seed_lakehouse.py
+
+      - name: Submit the Java app and assert Trino reads its output
+        working-directory: quickstart
+        run: |
+          docker cp spark/apps/java/target/iceberg-java-app-1.0.jar odp-spark:/tmp/app.jar
+          docker compose exec -T spark spark-submit \
+            --class com.gridatek.odp.IcebergApp /tmp/app.jar
+          N=$(docker compose exec -T trino trino --execute \
+            "SELECT count(*) FROM iceberg.de.events_java" | tr -d '"[:space:]')
+          echo "iceberg.de.events_java rows = $N"
+          test "$N" = "4"
+
+      - name: Dump logs on failure
+        if: failure()
+        working-directory: quickstart
+        run: docker compose logs --no-color spark trino | tail -150
+
+      - name: Tear down
+        if: always()
+        working-directory: quickstart
+        run: docker compose down -v
