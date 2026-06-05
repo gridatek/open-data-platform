@@ -45,5 +45,5 @@ CI runs this in [`.github/workflows/opdb-ci.yml`](../../.github/workflows/opdb-c
   `ERROR 726`). `smoke.sh` handles this.
 - **Cold start.** HBase must assign its regions before the first Phoenix
   connection can bootstrap `SYSTEM.CATALOG`; `smoke.sh` retries until ready.
-- HBase + Phoenix here are **2.0 / 5.0** (old but stable for a demo). Not wired
-  into the umbrella Helm chart yet — that's the next step.
+- HBase + Phoenix here are **2.0 / 5.0** (old but stable for a demo). Also shipped
+  as the `opdb` subchart in the umbrella Helm chart (default off — heavy, standalone).
