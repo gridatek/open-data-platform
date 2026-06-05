@@ -90,15 +90,36 @@ services:
     networks:
       - odp
 
+  # ── MLflow metadata DB (Postgres) ────────────────────────────
+  mlflow-db:
+    image: postgres:15
+    container_name: odp-mlflow-db
+    environment:
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: mlflow
+      POSTGRES_DB: mlflow
+    volumes:
+      - mlflow-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow -d mlflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - odp
+
   # ── MLflow tracking server (≈ Cloudera AI / CML) ─────────────
-  # Metadata in SQLite; artifacts in MinIO (s3://mlflow) via --serve-artifacts.
+  # Metadata in Postgres; artifacts in MinIO (s3://mlflow) via --serve-artifacts.
   mlflow:
     build:
       context: ../platform/ml/mlflow
-    image: ghcr.io/gridatek/mlflow:latest   # mlflow + boto3 baked in
+    image: ghcr.io/gridatek/mlflow:latest   # mlflow + boto3 + psycopg2 baked in
     container_name: odp-mlflow
     depends_on:
-      - mlflow-init
+      mlflow-init:
+        condition: service_started
+      mlflow-db:
+        condition: service_healthy
     environment:
       MLFLOW_S3_ENDPOINT_URL: http://minio:9000
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
@@ -106,14 +127,12 @@ services:
       AWS_REGION: ${AWS_REGION}
     ports:
       - "5000:5000"
-    volumes:
-      - mlflow-data:/mlflow
     command:
       - /bin/sh
       - -c
       - |
         mlflow server --host 0.0.0.0 --port 5000 \
-          --backend-store-uri sqlite:////mlflow/mlflow.db \
+          --backend-store-uri postgresql://mlflow:mlflow@mlflow-db:5432/mlflow \
           --artifacts-destination s3://mlflow/ --serve-artifacts
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
@@ -160,4 +179,4 @@ services:
 volumes:
   superset-home:
   airflow-home:
-  mlflow-data:
+  mlflow-db-data:
