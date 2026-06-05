@@ -1,0 +1,42 @@
+{{- if .Values.ingress.enabled -}}
+# Optional host-based Ingress for the platform UIs/APIs. Default OFF — needs an
+# ingress controller (e.g. ingress-nginx) and DNS/hosts pointing
+# `<name>.<baseDomain>` at it. Each entry maps to the stable Service name the
+# umbrella pins via fullnameOverride; only list services you've actually enabled.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-ingress
+  labels:
+    app.kubernetes.io/part-of: open-data-platform
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        {{- range $name, $svc := .Values.ingress.services }}
+        - {{ printf "%s.%s" $name $.Values.ingress.baseDomain | quote }}
+        {{- end }}
+      secretName: {{ .Values.ingress.tls.secretName }}
+  {{- end }}
+  rules:
+    {{- range $name, $svc := .Values.ingress.services }}
+    - host: {{ printf "%s.%s" $name $.Values.ingress.baseDomain | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $svc.service }}
+                port:
+                  number: {{ $svc.port }}
+    {{- end }}
+{{- end -}}
