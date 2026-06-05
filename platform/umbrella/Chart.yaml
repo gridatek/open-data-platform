@@ -25,6 +25,10 @@ dependencies:
   - name: ranger
     version: "0.1.0"
     condition: ranger.enabled
+  # Local subchart (charts/spark) — the Spark engine over the shared catalog.
+  - name: spark
+    version: "0.1.0"
+    condition: spark.enabled
   # Local subcharts (charts/{kafka,nifi,mlflow}) — streaming + ML tier.
   - name: kafka
     version: "0.1.0"

@@ -1,0 +1,43 @@
+# Spark — values.
+#
+# K8s port of the docker-compose `spark` service (tabulario/spark-iceberg). A
+# Spark runtime wired to the shared Iceberg REST catalog + MinIO; the `demo`
+# catalog points at the in-cluster iceberg-rest + minio Services. Heavy and
+# interactive, so default OFF — enable with `--set spark.enabled=true`.
+
+# Set by the umbrella via `condition: spark.enabled`.
+enabled: false
+
+replicaCount: 1
+
+image:
+  repository: tabulario/spark-iceberg
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8888          # Jupyter notebook
+
+# The Iceberg `demo` catalog → REST + S3 (MinIO). Service names match the
+# umbrella's iceberg-rest / minio fullnameOverride so they resolve by DNS.
+catalog:
+  name: demo
+  restUri: http://iceberg-rest:8181
+
+s3:
+  endpoint: http://minio:9000
+  region: us-east-1
+  warehouse: warehouse
+  pathStyleAccess: true
+  # Dev-only creds — must match minio.rootUser/rootPassword in the umbrella
+  # values. Override with a secret in any real cluster.
+  accessKey: admin
+  secretKey: password
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 1Gi
+  limits:
+    memory: 2Gi

@@ -1,0 +1,12 @@
+# Overrides for the spark-on-kind job — layered on top of kind-values.yaml.
+# Enable the Spark subchart (default OFF in the umbrella) on the lakehouse subset
+# and size it for a GitHub runner. Proves Spark writes the shared Iceberg REST
+# catalog and Trino reads the same tables, on a real cluster.
+spark:
+  enabled: true
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      memory: 2Gi
