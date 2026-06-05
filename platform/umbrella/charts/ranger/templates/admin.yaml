@@ -33,11 +33,32 @@ spec:
             - name: RANGER_DB_NAME
               value: {{ .Values.db.name | quote }}
             - name: RANGER_DB_USER
+              {{- if .Values.credentials.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.credentials.existingSecret }}
+                  key: {{ .Values.credentials.dbUserKey }}
+              {{- else }}
               value: {{ .Values.db.user | quote }}
+              {{- end }}
             - name: RANGER_DB_PASSWORD
+              {{- if .Values.credentials.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.credentials.existingSecret }}
+                  key: {{ .Values.credentials.dbPasswordKey }}
+              {{- else }}
               value: {{ .Values.db.password | quote }}
+              {{- end }}
             - name: RANGER_ADMIN_PASSWORD
+              {{- if .Values.credentials.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.credentials.existingSecret }}
+                  key: {{ .Values.credentials.adminPasswordKey }}
+              {{- else }}
               value: {{ .Values.admin.password | quote }}
+              {{- end }}
           # Schema setup + JVM/Tomcat start is slow; gate liveness behind startup.
           startupProbe:
             httpGet:

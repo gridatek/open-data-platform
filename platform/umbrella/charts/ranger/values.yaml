@@ -12,6 +12,17 @@
 # Set by the umbrella via `condition: ranger.enabled`.
 enabled: true
 
+# ── Credentials ──────────────────────────────────────────────
+# Preferred: read the admin + DB passwords from an existing Secret (the umbrella
+# points this at the shared `odp-ranger-credentials`, which the console also
+# reads). When existingSecret is empty, the plaintext admin.password / db.* below
+# are used (standalone dev only).
+credentials:
+  existingSecret: ""
+  adminPasswordKey: adminPassword
+  dbUserKey: dbUser
+  dbPasswordKey: dbPassword
+
 # ── Ranger admin: policy server + UI ─────────────────────────
 admin:
   image:

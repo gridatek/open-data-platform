@@ -40,7 +40,14 @@ spec:
             - name: ODP_RANGER_USERNAME
               value: {{ .Values.endpoints.ranger.username | quote }}
             - name: ODP_RANGER_PASSWORD
+              {{- if .Values.endpoints.ranger.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.endpoints.ranger.existingSecret }}
+                  key: {{ .Values.endpoints.ranger.passwordSecretKey }}
+              {{- else }}
               value: {{ .Values.endpoints.ranger.password | quote }}
+              {{- end }}
             - name: ODP_HEALTH_MINIO
               value: {{ .Values.endpoints.health.minio | quote }}
             - name: ODP_HEALTH_CATALOG

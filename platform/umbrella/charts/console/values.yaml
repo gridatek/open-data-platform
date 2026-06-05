@@ -28,6 +28,11 @@ endpoints:
     url: http://ranger-admin:6080
     serviceName: trino-odp
     username: admin
+    # Preferred: read the Ranger admin password from an existing Secret (the
+    # umbrella points this at the shared `odp-ranger-credentials`). Falls back to
+    # the plaintext password below when existingSecret is empty.
+    existingSecret: ""
+    passwordSecretKey: adminPassword
     password: "rangerR0cks!"
   health:
     minio: http://minio:9000/minio/health/live
