@@ -75,13 +75,81 @@ trino:
       s3.aws-access-key=admin
       s3.aws-secret-key=password
 
-# ── BI / viz — enable once the Trino connection is templated ──
+# ── BI / viz — Apache Superset (upstream chart) ──────────────
+# Default OFF (heavy: web + Celery worker + Redis + its own Postgres). Now fully
+# wired, so `--set superset.enabled=true` is enough:
+#  • our GHCR image has the Trino dialect + psycopg2 baked in (publish-images.yml);
+#  • metadata lives in the chart's bundled Postgres (postgresql.enabled, default on);
+#  • the Trino connection is seeded at init via the chart's import_datasources hook,
+#    pointing at the in-cluster `trino` Service.
 superset:
   enabled: false
+  image:
+    repository: ghcr.io/gridatek/superset
+    tag: latest
+    pullPolicy: IfNotPresent
+  # SECRET_KEY for sessions/CSRF (CSRF is on by default in the stock config).
+  extraSecretEnv:
+    SUPERSET_SECRET_KEY: "odp-dev-secret-change-me"
+  # The init job imports any import_datasources.yaml found at the config mount,
+  # so the governed Trino catalog is registered out of the box.
+  extraConfigs:
+    import_datasources.yaml: |
+      databases:
+        - database_name: trino-odp
+          sqlalchemy_uri: trino://admin@trino:8080/iceberg
+          expose_in_sqllab: true
+  # Single-process (web only), matching the compose laptop subset. Dropping the
+  # Celery worker/beat + bundled Redis also sidesteps a cross-subchart Sprig
+  # `merge` context bug that breaks rendering when Superset's Redis and Airflow's
+  # helpers are templated together. Sync SQL Lab queries don't need a worker.
+  supersetWorker:
+    enabled: false
+  supersetCeleryBeat:
+    enabled: false
+  redis:
+    enabled: false
+  # Point the metadata connection at our own-named Postgres (below). Both Superset
+  # and Airflow bundle a bitnami Postgres that defaults to `<release>-postgresql`,
+  # which would collide — so each gets a distinct fullnameOverride.
+  supersetNode:
+    connections:
+      db_host: superset-postgresql
+  postgresql:
+    fullnameOverride: superset-postgresql
+    # Trim the request so it schedules on a kind node.
+    primary:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
 
-# ── Orchestration — enable once DAGs ship via git-sync/image ──
+# ── Orchestration — Apache Airflow (upstream chart) ──────────
+# Default OFF. Now wired: LocalExecutor on the chart's bundled Postgres (no Redis
+# /workers — leaner than Celery and matches the compose laptop subset), and the
+# `lakehouse_smoke` DAG is shipped via git-sync from this repo.
 airflow:
   enabled: false
+  executor: LocalExecutor
+  # LocalExecutor runs tasks in the scheduler — no Celery broker needed.
+  redis:
+    enabled: false
+  # Static dev key so Helm doesn't rotate the webserver secret on every upgrade.
+  webserverSecretKey: "odp-dev-airflow-secret"
+  # Metadata store is the chart's bundled Postgres (postgresql.enabled, default on).
+  # Distinct name so it doesn't collide with Superset's `<release>-postgresql`.
+  postgresql:
+    fullnameOverride: airflow-postgresql
+  data:
+    metadataConnection:
+      host: airflow-postgresql
+  dags:
+    gitSync:
+      enabled: true
+      repo: https://github.com/gridatek/open-data-platform.git
+      branch: main
+      ref: main
+      subPath: platform/engineering/airflow/dags
 
 # ── SDX policies — Apache Ranger + its Postgres (local subchart) ──
 # Default ON: the admin image is published to GHCR (publish-images.yml) and the

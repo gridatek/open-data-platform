@@ -15,6 +15,22 @@ Dependencies with **official upstream charts** are wired and version-pinned:
 | Superset | superset | 0.15.5  | https://apache.github.io/superset |
 | Airflow  | airflow  | 1.21.0  | https://airflow.apache.org        |
 
+**Superset** and **Airflow** are now fully wired (default OFF — both are heavy):
+
+- **Superset** uses our GHCR image (Trino dialect + psycopg2 baked in), keeps its
+  metadata in the chart's bundled Postgres (`superset-postgresql`), and seeds the
+  governed Trino connection at init via the chart's `import_datasources` hook —
+  so `--set superset.enabled=true` lands a Superset that can query
+  `iceberg.smoke.events` out of the box. Run single-process (no Celery worker /
+  Redis), matching the compose laptop subset.
+- **Airflow** runs the `LocalExecutor` on its bundled Postgres
+  (`airflow-postgresql`) — no Redis/workers — and ships the `lakehouse_smoke` DAG
+  via git-sync from this repo. `--set airflow.enabled=true`.
+
+> Each bundles its own Postgres under a distinct `fullnameOverride` so they don't
+> collide on `<release>-postgresql`. `helm-ci` lint/templates the chart; these two
+> are validated by rendering (a runtime proof on kind is a heavier follow-up).
+
 The **SDX layer** (Iceberg REST catalog, Ranger, Atlas), the **streaming/ML**
 services (Kafka, NiFi, MLflow) and the **console** have no upstream chart, so
 they're local subcharts under `charts/` — all now ported:
