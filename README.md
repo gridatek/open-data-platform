@@ -4,8 +4,6 @@ A Kubernetes-native, fully open-source platform that mirrors Cloudera Data Platf
 in *shape*, so learners build it, run it, and use the labs to both master the open data
 stack and prepare for real Cloudera certifications.
 
-Working name: `@gridatek/open-data-platform` (alt codenames: `openruntime`, `lakeforge`).
-
 ---
 
 ## Quickstart (one command)
