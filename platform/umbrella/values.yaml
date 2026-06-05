@@ -344,3 +344,26 @@ console-web:
 opdb:
   enabled: false
   fullnameOverride: opdb
+
+# ── Ingress (optional) ───────────────────────────────────────
+# Host-based Ingress for the platform UIs/APIs. Default OFF — needs an ingress
+# controller + DNS pointing `<name>.<baseDomain>` at it. List only the services
+# you've enabled; backends use the stable fullnameOverride Service names.
+ingress:
+  enabled: false
+  className: nginx
+  baseDomain: odp.local
+  annotations: {}
+  tls:
+    enabled: false
+    secretName: odp-tls
+  services:
+    console:    { service: console-web,    port: 80 }
+    superset:   { service: odp-superset,   port: 8088 }
+    airflow:    { service: odp-api-server, port: 8080 }
+    mlflow:     { service: mlflow,         port: 5000 }
+    nifi:       { service: nifi,           port: 8080 }
+    ranger:     { service: ranger-admin,   port: 6080 }
+    atlas:      { service: atlas,          port: 21000 }
+    jupyterhub: { service: jupyterhub,     port: 8000 }
+    trino:      { service: trino,          port: 8080 }
