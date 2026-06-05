@@ -144,6 +144,25 @@ airflow:
   # LocalExecutor runs tasks in the scheduler — no Celery broker needed.
   redis:
     enabled: false
+  # Run the DB migration job as a normal resource, not a Helm hook. With hooks +
+  # `--wait`, the scheduler/api-server init containers block on migrations that
+  # only run in a post-install hook → deadlock. As a plain job it runs during
+  # install so the pods can start. The wait-for-db init container keeps it from
+  # racing the bundled Postgres startup into CrashLoopBackOff.
+  migrateDatabaseJob:
+    useHelmHooks: false
+    extraInitContainers:
+      - name: wait-for-db
+        image: busybox:1.36
+        command:
+          - sh
+          - -c
+          - "until nc -z airflow-postgresql 5432; do echo 'waiting for db'; sleep 2; done"
+  # Airflow 3 defaults to SimpleAuthManager (no DB users), so the legacy
+  # create-user job ("airflow users create" is FAB-only) crash-loops. Skip it;
+  # the api-server manages its own admin credential.
+  createUserJob:
+    enabled: false
   # Static dev key so Helm doesn't rotate the webserver secret on every upgrade.
   webserverSecretKey: "odp-dev-airflow-secret"
   # Metadata store is the chart's bundled Postgres (postgresql.enabled, default on).
