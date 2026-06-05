@@ -372,3 +372,60 @@ jobs:
           kubectl -n odp get pods -o wide || true
           kubectl -n odp describe pods || true
           kubectl -n odp logs -l app.kubernetes.io/name=jupyterhub --tail=150 || true
+
+  # ML tracking on a real cluster: deploy MLflow (+ MinIO for artifacts) with its
+  # S3 creds from the shared Secret and its Postgres password from the mlflow
+  # Secret, then log a run and read it back. MLflow's first runtime proof.
+  mlflow-on-kind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: odp
+
+      - name: Build and load the MLflow image
+        run: |
+          docker build -t ghcr.io/gridatek/mlflow:latest platform/ml/mlflow
+          kind load docker-image ghcr.io/gridatek/mlflow:latest --name odp
+
+      - name: Add chart repos
+        run: |
+          helm repo add minio https://charts.min.io/
+          helm repo add trino https://trinodb.github.io/charts
+          helm repo add superset https://apache.github.io/superset
+          helm repo add apache-airflow https://airflow.apache.org
+          helm repo update
+
+      - name: Build chart dependencies
+        run: helm dependency build platform/umbrella
+
+      - name: Install MinIO + MLflow
+        run: |
+          helm install odp platform/umbrella -n odp --create-namespace \
+            -f platform/umbrella/ci/kind-values.yaml \
+            -f platform/umbrella/ci/kind-mlflow-values.yaml \
+            --wait --timeout 12m
+
+      - name: Log a run and read it back (creds from Secrets)
+        run: |
+          kubectl -n odp port-forward svc/mlflow 5000:5000 >/tmp/ml-pf.log 2>&1 &
+          # mlflow answers /health before its gunicorn workers fully serve the
+          # DB-backed endpoints; retry the whole proof to ride out that warmup
+          # (and any port-forward hiccup).
+          for attempt in 1 2 3 4 5; do
+            sleep 6
+            MLFLOW_URL=http://localhost:5000 bash platform/ml/log-run.sh && exit 0
+            echo "log-run attempt ${attempt} failed; retrying ..."
+          done
+          echo "mlflow proof failed after retries"; cat /tmp/ml-pf.log; exit 1
+
+      - name: Dump diagnostics on failure
+        if: failure()
+        run: |
+          kubectl -n odp get pods -o wide || true
+          kubectl -n odp describe pods || true
+          kubectl -n odp logs -l app.kubernetes.io/name=mlflow --tail=150 --all-containers || true

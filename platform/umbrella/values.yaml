@@ -256,6 +256,14 @@ ranger:
   db:
     name: ranger
 
+# ── MLflow backend-store credential ──────────────────────────
+# One Secret (templates/mlflow-credentials-secret.yaml) for the MLflow Postgres
+# password. Override before using for real.
+mlflowCredentials:
+  create: true
+  secretName: odp-mlflow-credentials
+  dbPassword: mlflow
+
 # ── Streaming + ML tier (local subcharts) ───────────────────
 # Public images, so they "just work" — but default OFF to keep the base install
 # lean (like superset/airflow). Enable with --set <name>.enabled=true. Stable
@@ -269,12 +277,15 @@ nifi:
 mlflow:
   enabled: false
   fullnameOverride: mlflow
+  # S3 artifact creds from the shared Secret; the backend-store Postgres password
+  # from the mlflow Secret below.
   s3:
     endpoint: http://minio:9000
     region: us-east-1
     bucket: mlflow
-    accessKey: admin
-    secretKey: password
+    existingSecret: odp-s3-credentials
+  db:
+    existingSecret: odp-mlflow-credentials
 # JupyterHub (≈ CML notebooks). Image published to GHCR; default on.
 jupyterhub:
   enabled: true

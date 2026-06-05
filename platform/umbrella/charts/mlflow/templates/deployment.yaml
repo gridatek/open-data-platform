@@ -37,18 +37,43 @@ spec:
             - name: MLFLOW_S3_ENDPOINT_URL
               value: {{ .Values.s3.endpoint | quote }}
             - name: AWS_ACCESS_KEY_ID
+              {{- if .Values.s3.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.s3.existingSecret }}
+                  key: {{ .Values.s3.accessKeySecretKey }}
+              {{- else }}
               value: {{ .Values.s3.accessKey | quote }}
+              {{- end }}
             - name: AWS_SECRET_ACCESS_KEY
+              {{- if .Values.s3.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.s3.existingSecret }}
+                  key: {{ .Values.s3.secretKeySecretKey }}
+              {{- else }}
               value: {{ .Values.s3.secretKey | quote }}
+              {{- end }}
             - name: AWS_REGION
               value: {{ .Values.s3.region | quote }}
+            # DB password as env so it stays out of the rendered command line; the
+            # backend-store-uri references it as $MLFLOW_DB_PASSWORD below.
+            - name: MLFLOW_DB_PASSWORD
+              {{- if .Values.db.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.existingSecret }}
+                  key: {{ .Values.db.passwordSecretKey }}
+              {{- else }}
+              value: {{ .Values.db.password | quote }}
+              {{- end }}
           # boto3 + psycopg2 are baked into the image; serve with the Postgres
           # backend store and the MinIO-backed artifact store.
           command: ["/bin/sh", "-c"]
           args:
             - |
               mlflow server --host 0.0.0.0 --port {{ .Values.service.port }} \
-                --backend-store-uri postgresql://{{ .Values.db.user }}:{{ .Values.db.password }}@{{ include "mlflow.db.fullname" . }}:{{ .Values.db.service.port }}/{{ .Values.db.name }} \
+                --backend-store-uri postgresql://{{ .Values.db.user }}:$MLFLOW_DB_PASSWORD@{{ include "mlflow.db.fullname" . }}:{{ .Values.db.service.port }}/{{ .Values.db.name }} \
                 --artifacts-destination s3://{{ .Values.s3.bucket }}/ --serve-artifacts
           startupProbe:
             httpGet:
