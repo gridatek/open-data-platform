@@ -39,10 +39,13 @@ NiFi REST/UI is reachable.
 - **NiFi runs in plain-HTTP, anonymous mode** (`NIFI_WEB_HTTP_PORT`) for an
   easy laptop UI. NiFi 1.x/2.x default to HTTPS + single-user auth — that's what
   a real deployment uses.
-- **No automated flow yet.** The headline goal — a NiFi flow that consumes
-  `odp-events` from Kafka and lands it in `iceberg.smoke.events` (via PutIceberg
-  or a Trino/Spark sink) — is the next step. Building it via the NiFi REST API
-  (create process group, processors, connections, start) is fragile to script,
-  so for now CI proves Kafka end-to-end and NiFi reachability separately.
+- **Kafka → Iceberg is wired.** The headline goal — events from Kafka landing in
+  the governed lakehouse — runs as a **Spark Structured Streaming** ingest
+  (`quickstart/spark/jobs/stream_kafka_to_iceberg.py`): produce JSON to the
+  `events` topic, Spark drains it (`trigger=availableNow`) into
+  `demo.stream.events`, and Trino reads `iceberg.stream.events`. Proven by
+  `streaming-ci` (`platform/flow/kafka-to-iceberg.sh`). NiFi also runs a minimal
+  automated flow via its REST API (`platform/flow/nifi-flow.sh`, `flow-ci`); a
+  NiFi-native `PutIceberg` sink is a further variant.
 - Kafka storage is ephemeral (no volume) — fine for the demo/CI; add a volume
   for persistence.
