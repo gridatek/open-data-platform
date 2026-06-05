@@ -413,8 +413,15 @@ jobs:
       - name: Log a run and read it back (creds from Secrets)
         run: |
           kubectl -n odp port-forward svc/mlflow 5000:5000 >/tmp/ml-pf.log 2>&1 &
-          sleep 5
-          MLFLOW_URL=http://localhost:5000 bash platform/ml/log-run.sh
+          # mlflow answers /health before its gunicorn workers fully serve the
+          # DB-backed endpoints; retry the whole proof to ride out that warmup
+          # (and any port-forward hiccup).
+          for attempt in 1 2 3 4 5; do
+            sleep 6
+            MLFLOW_URL=http://localhost:5000 bash platform/ml/log-run.sh && exit 0
+            echo "log-run attempt ${attempt} failed; retrying ..."
+          done
+          echo "mlflow proof failed after retries"; cat /tmp/ml-pf.log; exit 1
 
       - name: Dump diagnostics on failure
         if: failure()
