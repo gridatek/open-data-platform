@@ -153,6 +153,9 @@ jobs:
       - name: Register a model in the MLflow Model Registry
         run: bash ../platform/ml/register-model.sh
 
+      - name: Serve a model and POST an inference request
+        run: bash ../platform/ml/serve-model.sh
+
       - name: Dump logs on failure
         if: failure()
         run: docker compose -f docker-compose.yml -f docker-compose.services.yml logs --no-color mlflow mlflow-init
