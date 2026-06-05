@@ -85,9 +85,13 @@ The script posts the entities, resolves the table's guid, queries
 `events_source` shows up. Open http://localhost:21000 to see the graph in the
 Atlas UI. CI runs this in `.github/workflows/atlas-ci.yml`.
 
-> This registers lineage **explicitly** via REST — the honest stub. Automatic
-> capture (a Spark/Trino hook emitting lineage as jobs run) is the real goal and
-> a later step; the entity/graph model proven here is the same one a hook feeds.
+> `register-lineage.sh` posts a hand-authored graph (the entity model reference).
+> **Automatic** capture is now wired too: `register-lineage-auto.sh` runs a Spark
+> transform with the **OpenLineage** listener (which emits lineage as the job
+> runs), bridges the captured events into Atlas via
+> `lineage-from-openlineage.py`, and verifies the discovered edge
+> `iceberg.smoke.events -> iceberg.smoke.events_curated`. `atlas-ci` runs the
+> automatic path. A native Trino event-listener -> Atlas hook is a further variant.
 
 ## Versions (pinned)
 

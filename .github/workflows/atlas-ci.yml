@@ -9,11 +9,15 @@ on:
     branches: [main]
     paths:
       - "platform/governance/atlas/**"
+      - "quickstart/spark/jobs/**"
+      - "quickstart/docker-compose.yml"
       - "quickstart/docker-compose.governance.yml"
       - ".github/workflows/atlas-ci.yml"
   pull_request:
     paths:
       - "platform/governance/atlas/**"
+      - "quickstart/spark/jobs/**"
+      - "quickstart/docker-compose.yml"
       - "quickstart/docker-compose.governance.yml"
       - ".github/workflows/atlas-ci.yml"
   workflow_dispatch:
@@ -31,12 +35,13 @@ jobs:
       - name: Create .env from example
         run: cp .env.example .env
 
-      - name: Start Atlas only
+      # Atlas (embedded HBase + Solr) is memory-hungry — boot it alone.
+      - name: Start Atlas
         run: docker compose -f docker-compose.yml -f docker-compose.governance.yml up -d atlas
 
-      - name: Wait for Atlas REST (up to ~10 min)
+      - name: Wait for Atlas REST (up to ~15 min)
         run: |
-          for i in $(seq 1 60); do
+          for i in $(seq 1 90); do
             if curl -sf -u admin:admin http://localhost:21000/api/atlas/admin/version >/dev/null; then
               echo "Atlas is up"; exit 0
             fi
@@ -44,8 +49,26 @@ jobs:
           done
           echo "Atlas did not become ready in time"; exit 1
 
-      - name: Register and verify lineage
+      # Gating proof: the entity/graph model, posted via REST (lightweight).
+      - name: Register and verify lineage (entity model)
         run: bash ../platform/governance/atlas/register-lineage.sh
+
+      # Best-effort: the *automatic* path — a Spark transform with the OpenLineage
+      # listener, bridged into Atlas. Needs Spark + iceberg-rest + minio on top of
+      # Atlas, which is tight on a 7 GB runner, so a resource-starve here doesn't
+      # block the PR. It's validated locally (OpenLineage capture + the bridge).
+      - name: Start Spark (+ iceberg-rest + minio)
+        continue-on-error: true
+        run: docker compose -f docker-compose.yml -f docker-compose.governance.yml up -d spark
+
+      - name: Automatic lineage — capture from Spark (OpenLineage) into Atlas
+        continue-on-error: true
+        run: |
+          for i in $(seq 1 40); do
+            docker compose exec -T spark ls /opt/spark/bin/spark-submit >/dev/null 2>&1 && break
+            echo "waiting for Spark ($i)..."; sleep 5
+          done
+          bash ../platform/governance/atlas/register-lineage-auto.sh
 
       - name: Dump Atlas logs on failure
         if: failure()
