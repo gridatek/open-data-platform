@@ -26,8 +26,13 @@ s3:
   region: us-east-1
   warehouse: warehouse
   pathStyleAccess: true
-  # Dev-only creds — must match the MinIO root user/password in the umbrella
-  # values. Override with a secret in any real cluster.
+  # Preferred: read creds from an existing Secret (the umbrella points this at the
+  # shared `odp-s3-credentials`). Key names default to the MinIO chart's
+  # rootUser/rootPassword so one Secret serves both.
+  existingSecret: ""
+  accessKeySecretKey: rootUser
+  secretKeySecretKey: rootPassword
+  # Fallback plaintext creds when existingSecret is empty (standalone dev only).
   accessKey: admin
   secretKey: password
 

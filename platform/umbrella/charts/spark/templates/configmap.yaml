@@ -17,7 +17,9 @@ data:
     spark.sql.catalog.{{ .Values.catalog.name }}.warehouse             s3://{{ .Values.s3.warehouse }}/
     spark.sql.catalog.{{ .Values.catalog.name }}.s3.endpoint           {{ .Values.s3.endpoint }}
     spark.sql.catalog.{{ .Values.catalog.name }}.s3.path-style-access  {{ .Values.s3.pathStyleAccess }}
+    {{- if not .Values.s3.existingSecret }}
     spark.sql.catalog.{{ .Values.catalog.name }}.s3.access-key-id      {{ .Values.s3.accessKey }}
     spark.sql.catalog.{{ .Values.catalog.name }}.s3.secret-access-key  {{ .Values.s3.secretKey }}
+    {{- end }}
     spark.sql.defaultCatalog                                   {{ .Values.catalog.name }}
     spark.sql.catalogImplementation                            in-memory

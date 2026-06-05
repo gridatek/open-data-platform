@@ -25,11 +25,25 @@ spec:
             - name: jupyter
               containerPort: {{ .Values.service.port }}
           env:
-            # S3FileIO also reads creds from the AWS default chain.
+            # S3FileIO reads creds from the AWS default chain (these env vars).
             - name: AWS_ACCESS_KEY_ID
+              {{- if .Values.s3.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.s3.existingSecret }}
+                  key: {{ .Values.s3.accessKeySecretKey }}
+              {{- else }}
               value: {{ .Values.s3.accessKey | quote }}
+              {{- end }}
             - name: AWS_SECRET_ACCESS_KEY
+              {{- if .Values.s3.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.s3.existingSecret }}
+                  key: {{ .Values.s3.secretKeySecretKey }}
+              {{- else }}
               value: {{ .Values.s3.secretKey | quote }}
+              {{- end }}
             - name: AWS_REGION
               value: {{ .Values.s3.region | quote }}
           volumeMounts:

@@ -5,14 +5,26 @@
 # --set or a sealed secret in any real cluster.
 
 # ── Object storage (the lakehouse foundation) ────────────────
+# ── Shared S3 / MinIO credential ─────────────────────────────
+# One Secret (templates/s3-credentials-secret.yaml) instead of the same
+# admin/password repeated across minio, iceberg-rest, trino and spark. They all
+# read it: minio via `existingSecret`, the rest via secretKeyRef. Override these
+# (or set create:false and point `secretName` at your own Secret with the same
+# rootUser/rootPassword keys) before using anywhere real.
+s3Credentials:
+  create: true
+  secretName: odp-s3-credentials
+  accessKey: admin
+  secretKey: password
+
 # fullnameOverride pins the Service to `minio` so the catalog and Trino can
 # address it by a stable DNS name regardless of the Helm release name.
 minio:
   enabled: true
   fullnameOverride: minio
   mode: standalone
-  rootUser: admin
-  rootPassword: password          # >= 8 chars; matches the S3 creds below
+  # Root user/password come from the shared Secret (keys rootUser/rootPassword).
+  existingSecret: odp-s3-credentials
   persistence:
     size: 10Gi
   buckets:
@@ -38,8 +50,8 @@ iceberg-rest:
     region: us-east-1
     warehouse: warehouse
     pathStyleAccess: true
-    accessKey: admin
-    secretKey: password
+    # Creds come from the shared Secret (keys rootUser/rootPassword).
+    existingSecret: odp-s3-credentials
 
 # ── Spark engine over the shared catalog (local subchart) ────
 # The K8s port of the compose `spark` service. Heavy + interactive, so default
@@ -49,6 +61,9 @@ iceberg-rest:
 spark:
   enabled: false
   fullnameOverride: spark
+  # S3 creds come from the shared Secret (keys rootUser/rootPassword).
+  s3:
+    existingSecret: odp-s3-credentials
 
 # ── SDX lineage — Apache Atlas (local subchart) ──────────────
 # Heavy (embedded HBase + Solr, ~3Gi, slow to start). Disable on small clusters
@@ -68,9 +83,22 @@ trino:
   fullnameOverride: trino
   server:
     workers: 2
+  # S3 creds come from the shared Secret as env; the native S3 filesystem falls
+  # back to the AWS default credential chain (these env vars) when the catalog
+  # file omits s3.aws-access-key/secret-key.
+  env:
+    - name: AWS_ACCESS_KEY_ID
+      valueFrom:
+        secretKeyRef:
+          name: odp-s3-credentials
+          key: rootUser
+    - name: AWS_SECRET_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: odp-s3-credentials
+          key: rootPassword
   # Wire the Iceberg connector to the shared REST catalog + MinIO so Trino and
   # Spark see the same tables (mirrors quickstart/trino/etc/catalog/iceberg.properties).
-  # Dev-only S3 creds — keep in sync with minio.rootUser/rootPassword above.
   additionalCatalogs:
     iceberg: |
       connector.name=iceberg
@@ -81,8 +109,6 @@ trino:
       s3.endpoint=http://minio:9000
       s3.region=us-east-1
       s3.path-style-access=true
-      s3.aws-access-key=admin
-      s3.aws-secret-key=password
 
 # ── BI / viz — Apache Superset (upstream chart) ──────────────
 # Default OFF (heavy: web + Celery worker + Redis + its own Postgres). Now fully

@@ -26,9 +26,23 @@ spec:
             # iceberg-rest-fixture config keys (CATALOG_S3_PATH__STYLE__ACCESS
             # → catalog.s3.path-style-access).
             - name: AWS_ACCESS_KEY_ID
+              {{- if .Values.s3.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.s3.existingSecret }}
+                  key: {{ .Values.s3.accessKeySecretKey }}
+              {{- else }}
               value: {{ .Values.s3.accessKey | quote }}
+              {{- end }}
             - name: AWS_SECRET_ACCESS_KEY
+              {{- if .Values.s3.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.s3.existingSecret }}
+                  key: {{ .Values.s3.secretKeySecretKey }}
+              {{- else }}
               value: {{ .Values.s3.secretKey | quote }}
+              {{- end }}
             - name: AWS_REGION
               value: {{ .Values.s3.region | quote }}
             - name: CATALOG_WAREHOUSE
