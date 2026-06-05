@@ -11,11 +11,13 @@ on:
     paths:
       - "platform/umbrella/**"
       - "platform/governance/**"
+      - "platform/engineering/**"
       - ".github/workflows/kind-ci.yml"
   pull_request:
     paths:
       - "platform/umbrella/**"
       - "platform/governance/**"
+      - "platform/engineering/**"
       - ".github/workflows/kind-ci.yml"
   workflow_dispatch:
 
@@ -121,3 +123,59 @@ jobs:
           kubectl -n odp logs -l app.kubernetes.io/name=trino --tail=150 --all-containers || true
           kubectl -n odp logs -l app.kubernetes.io/component=admin --tail=150 || true
           kubectl -n odp logs -l app.kubernetes.io/name=ranger --tail=150 || true
+
+  # Orchestration on a real cluster: deploy the umbrella's Airflow (our 3.2.0 +
+  # Trino-provider image, LocalExecutor, the git-synced lakehouse_smoke DAG) next
+  # to the lakehouse, then run the DAG and assert it wrote the governed table
+  # through Trino. Proves the Helm Airflow wiring at runtime, not just in render.
+  airflow-on-kind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: odp
+
+      - name: Build and load the Airflow image (3.2.0 + Trino provider)
+        run: |
+          # Match the chart's appVersion; tag as the umbrella's image and load it
+          # so imagePullPolicy IfNotPresent uses the local copy (no private pull).
+          docker build --build-arg AIRFLOW_VERSION=3.2.0 \
+            -t ghcr.io/gridatek/airflow:3.2.0 platform/engineering/airflow
+          kind load docker-image ghcr.io/gridatek/airflow:3.2.0 --name odp
+
+      - name: Add chart repos
+        run: |
+          helm repo add minio https://charts.min.io/
+          helm repo add trino https://trinodb.github.io/charts
+          helm repo add superset https://apache.github.io/superset
+          helm repo add apache-airflow https://airflow.apache.org
+          helm repo update
+
+      - name: Build chart dependencies
+        run: helm dependency build platform/umbrella
+
+      - name: Install the lakehouse + Airflow
+        run: |
+          # git-sync the DAG from the ref under test (the branch on a PR, main on push).
+          REF="${{ github.head_ref || github.ref_name }}"
+          helm install odp platform/umbrella -n odp --create-namespace \
+            -f platform/umbrella/ci/kind-values.yaml \
+            -f platform/umbrella/ci/kind-airflow-values.yaml \
+            --set airflow.dags.gitSync.ref="$REF" \
+            --wait --timeout 12m
+
+      - name: Run the DAG end-to-end (real Trino operators)
+        run: NS=odp bash platform/engineering/airflow-on-kind.sh
+
+      - name: Dump diagnostics on failure
+        if: failure()
+        run: |
+          kubectl -n odp get pods -o wide || true
+          kubectl -n odp describe pods || true
+          kubectl -n odp logs -l component=scheduler -c scheduler --tail=150 || true
+          kubectl -n odp logs -l component=dag-processor --tail=120 || true
+          kubectl -n odp logs -l app.kubernetes.io/name=trino --tail=120 --all-containers || true

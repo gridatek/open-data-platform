@@ -1,0 +1,28 @@
+# Overrides for the airflow-on-kind job — layered on top of kind-values.yaml.
+# Re-enable Airflow (kind-values turns it off for the lakehouse smoke) and size
+# its components for a GitHub runner. Proves the umbrella's Airflow path — our
+# 3.2.0 + Trino-provider image, LocalExecutor on the bundled Postgres, the
+# git-synced lakehouse_smoke DAG — runs the DAG's real Trino operators on a real
+# cluster.
+airflow:
+  enabled: true
+  # No metrics sidecar needed for the smoke.
+  statsd:
+    enabled: false
+  # Trim requests so everything co-schedules next to Trino on one runner node.
+  scheduler:
+    resources:
+      requests: { cpu: 100m, memory: 512Mi }
+  apiServer:
+    resources:
+      requests: { cpu: 100m, memory: 384Mi }
+  dagProcessor:
+    resources:
+      requests: { cpu: 100m, memory: 384Mi }
+  triggerer:
+    resources:
+      requests: { cpu: 50m, memory: 256Mi }
+  postgresql:
+    primary:
+      resources:
+        requests: { cpu: 100m, memory: 256Mi }
