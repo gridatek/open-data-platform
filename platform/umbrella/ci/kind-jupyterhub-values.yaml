@@ -1,0 +1,11 @@
+# Overrides for the jupyterhub-on-kind job — layered on top of kind-values.yaml.
+# JupyterHub is standalone, so skip the lakehouse to keep the job light, and
+# enable the hub. Proves it comes up and spawns a single-user notebook server.
+iceberg-rest:
+  enabled: false
+trino:
+  enabled: false
+minio:
+  enabled: false
+jupyterhub:
+  enabled: true

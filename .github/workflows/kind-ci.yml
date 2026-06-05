@@ -275,3 +275,100 @@ jobs:
           kubectl -n odp logs -l app.kubernetes.io/name=spark --tail=150 || true
           kubectl -n odp logs -l app.kubernetes.io/name=iceberg-rest --tail=120 || true
           kubectl -n odp logs -l app.kubernetes.io/name=trino --tail=120 --all-containers || true
+
+  # Control plane on a real cluster: deploy the console API (its ServiceAccount +
+  # RBAC) next to the lakehouse, then assert it reports service health, browses
+  # the Iceberg REST catalog, and scales a Deployment through the K8s API.
+  console-on-kind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: odp
+
+      - name: Build and load the console API image
+        run: |
+          docker build -t ghcr.io/gridatek/console-api:latest console/api
+          kind load docker-image ghcr.io/gridatek/console-api:latest --name odp
+
+      - name: Add chart repos
+        run: |
+          helm repo add minio https://charts.min.io/
+          helm repo add trino https://trinodb.github.io/charts
+          helm repo add superset https://apache.github.io/superset
+          helm repo add apache-airflow https://airflow.apache.org
+          helm repo update
+
+      - name: Build chart dependencies
+        run: helm dependency build platform/umbrella
+
+      - name: Install the lakehouse + console
+        run: |
+          helm install odp platform/umbrella -n odp --create-namespace \
+            -f platform/umbrella/ci/kind-values.yaml \
+            -f platform/umbrella/ci/kind-console-values.yaml \
+            --wait --timeout 12m
+
+      - name: Console proof — health, catalog browse, scale via RBAC
+        run: NS=odp bash console/console-on-kind.sh
+
+      - name: Dump diagnostics on failure
+        if: failure()
+        run: |
+          kubectl -n odp get pods -o wide || true
+          kubectl -n odp describe pods || true
+          kubectl -n odp logs -l app.kubernetes.io/name=console --tail=150 || true
+          kubectl -n odp logs -l app.kubernetes.io/name=iceberg-rest --tail=120 || true
+
+  # Notebooks on a real cluster: deploy JupyterHub (standalone, no lakehouse) and
+  # assert the hub comes up and spawns a single-user notebook server.
+  jupyterhub-on-kind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: odp
+
+      - name: Build and load the JupyterHub image
+        run: |
+          docker build -t ghcr.io/gridatek/jupyterhub:latest platform/ml/jupyterhub
+          kind load docker-image ghcr.io/gridatek/jupyterhub:latest --name odp
+
+      - name: Add chart repos
+        run: |
+          helm repo add minio https://charts.min.io/
+          helm repo add trino https://trinodb.github.io/charts
+          helm repo add superset https://apache.github.io/superset
+          helm repo add apache-airflow https://airflow.apache.org
+          helm repo update
+
+      - name: Build chart dependencies
+        run: helm dependency build platform/umbrella
+
+      - name: Install JupyterHub
+        run: |
+          helm install odp platform/umbrella -n odp --create-namespace \
+            -f platform/umbrella/ci/kind-values.yaml \
+            -f platform/umbrella/ci/kind-jupyterhub-values.yaml \
+            --wait --timeout 10m
+
+      - name: Spawn a notebook server (hub up + spawn)
+        run: |
+          kubectl -n odp port-forward svc/jupyterhub 8000:8000 >/tmp/jh-pf.log 2>&1 &
+          sleep 5
+          HUB_URL=http://localhost:8000 bash platform/ml/jupyterhub/smoke.sh
+
+      - name: Dump diagnostics on failure
+        if: failure()
+        run: |
+          kubectl -n odp get pods -o wide || true
+          kubectl -n odp describe pods || true
+          kubectl -n odp logs -l app.kubernetes.io/name=jupyterhub --tail=150 || true
