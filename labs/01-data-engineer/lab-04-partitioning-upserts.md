@@ -9,6 +9,12 @@ Two production patterns: **hidden partitioning** (lay data out for fast queries
 without leaking partition columns into your SQL) and **`MERGE INTO`** (upsert an
 incremental batch instead of reloading the whole table).
 
+> **Runnable demo:** partitioning, `MERGE` upsert, schema evolution and
+> time-travel are scripted end-to-end and CI-proven —
+> `quickstart/spark/jobs/iceberg_features.py` +
+> `platform/engineering/iceberg-features.sh`
+> (`docker compose exec spark spark-submit /home/iceberg/jobs/iceberg_features.py`).
+
 ## Steps
 
 1. **Create a partitioned table** — partition by day of the event timestamp:

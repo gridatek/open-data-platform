@@ -9,6 +9,11 @@ The features that make Iceberg a *table format* and not just files: evolve the
 schema safely, inspect snapshots, time-travel to a past version, and compact +
 expire old data. These are the maintenance tasks a Data Engineer owns.
 
+> **Runnable demos (CI-proven):** schema evolution + time-travel live in
+> `quickstart/spark/jobs/iceberg_features.py` (+ `platform/engineering/iceberg-features.sh`);
+> compaction + snapshot expiry in `quickstart/spark/jobs/maintain_lakehouse.py`.
+> `quickstart-ci` runs both.
+
 ## Steps
 
 1. **Evolve the schema** — add a column without rewriting data:
