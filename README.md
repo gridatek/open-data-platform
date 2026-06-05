@@ -26,7 +26,8 @@ make seed               # write the demo Iceberg table
 Lighter starts: `make core` (just the lakehouse), `make governance`, `make services`.
 Then work the [labs](labs/). For Kubernetes, see the umbrella chart in
 [`platform/umbrella`](platform/umbrella/). Each phase is proven by a workflow in
-[`.github/workflows`](.github/workflows/).
+[`.github/workflows`](.github/workflows/). To run it on a real cluster, see
+[docs/production.md](docs/production.md).
 
 ---
 
