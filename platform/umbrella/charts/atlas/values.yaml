@@ -42,6 +42,10 @@ resources:
   limits:
     memory: 3Gi
 
+# Deployment progress deadline — must exceed the startup budget below, else the
+# Deployment is marked Failed before Atlas finishes booting (k8s default is 600s).
+progressDeadlineSeconds: 1200
+
 # Embedded HBase/Solr can take a few minutes; the startupProbe holds liveness off
 # until the REST API answers (failureThreshold * periodSeconds budget).
 startup:

@@ -6,6 +6,10 @@ metadata:
     {{- include "atlas.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  # Atlas (embedded HBase + Solr) can take longer than the 600s default to first
+  # become available; widen the window so the Deployment isn't marked Failed
+  # before the startup probe gets its chance.
+  progressDeadlineSeconds: {{ .Values.progressDeadlineSeconds }}
   selector:
     matchLabels:
       {{- include "atlas.selectorLabels" . | nindent 6 }}
