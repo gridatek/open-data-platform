@@ -21,3 +21,18 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version }}
 app.kubernetes.io/name: {{ include "mlflow.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
+
+{{- define "mlflow.db.fullname" -}}
+{{- printf "%s-db" (include "mlflow.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/* Component selectors so the server and its Postgres don't select each other. */}}
+{{- define "mlflow.server.selectorLabels" -}}
+{{ include "mlflow.selectorLabels" . }}
+app.kubernetes.io/component: server
+{{- end -}}
+
+{{- define "mlflow.db.selectorLabels" -}}
+{{ include "mlflow.selectorLabels" . }}
+app.kubernetes.io/component: db
+{{- end -}}

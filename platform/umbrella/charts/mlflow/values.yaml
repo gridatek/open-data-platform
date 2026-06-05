@@ -1,12 +1,13 @@
 # MLflow tracking server — values. K8s port of the docker-compose `mlflow` service.
-# Artifacts live in MinIO; its S3 creds must match the MinIO root user/password
-# in the umbrella values. The `mlflow` bucket is created by the MinIO subchart.
+# Metadata in Postgres (the db component below); artifacts in MinIO (its S3 creds
+# must match the MinIO root user/password; the `mlflow` bucket is created by the
+# MinIO subchart).
 enabled: true
 
 replicaCount: 1
 
 image:
-  repository: ghcr.io/gridatek/mlflow    # mlflow + boto3 baked in (publish-images.yml)
+  repository: ghcr.io/gridatek/mlflow    # mlflow + boto3 + psycopg2 (publish-images.yml)
   tag: "latest"
   pullPolicy: IfNotPresent
 
@@ -22,10 +23,27 @@ s3:
   accessKey: admin
   secretKey: password
 
-persistence:
-  enabled: false        # SQLite metadata DB — ephemeral by default
-  size: 2Gi
-  # storageClass: ""
+# Postgres backend store (run/experiment metadata).
+db:
+  image:
+    repository: postgres
+    tag: "15"
+    pullPolicy: IfNotPresent
+  user: mlflow
+  password: mlflow
+  name: mlflow
+  service:
+    port: 5432
+  persistence:
+    enabled: true
+    size: 5Gi
+    # storageClass: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
 
 startup:
   periodSeconds: 10

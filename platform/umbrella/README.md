@@ -26,7 +26,7 @@ they're local subcharts under `charts/` — all now ported:
 | `ranger`        | ✅ done¹  | Policy server + UI **and** its Postgres metadata store (admin Deployment + db Deployment/Service/PVC). Stable Service names `ranger-admin` / `ranger-db`. |
 | `kafka`         | ✅ done   | Single-node KRaft broker; advertised listener uses the stable `kafka` Service name. Default off. |
 | `nifi`          | ✅ done   | Flow authoring, plain HTTP/anonymous; `startupProbe` on `/nifi`. Default off. |
-| `mlflow`        | ✅ done   | Tracking server; SQLite metadata, artifacts in the MinIO `mlflow` bucket. Default off. |
+| `mlflow`        | ✅ done   | Tracking server **+ its Postgres** (`mlflow-db`) for metadata; artifacts in the MinIO `mlflow` bucket. Default off. |
 | `jupyterhub`    | ✅ done¹  | Multi-user notebooks (≈ CML). Dummy auth, local spawner. GHCR image, default on. |
 | `console`       | ✅ done¹  | Control-plane API (Spring Boot). Env points at the in-cluster Services (Trino pinned to `trino` via `fullnameOverride`); a ServiceAccount + RBAC let it restart/scale Deployments. GHCR image, default on. |
 | `console-web`   | ✅ done¹  | Angular UI served by nginx, which reverse-proxies `/api` → `console-api:8090`. GHCR image, default on; needs `console` (also on by default). |

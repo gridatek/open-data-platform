@@ -1,38 +1,31 @@
-{{- if .Values.persistence.enabled }}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "mlflow.fullname" . }}
-  labels:
-    {{- include "mlflow.labels" . | nindent 4 }}
-spec:
-  accessModes: ["ReadWriteOnce"]
-  resources:
-    requests:
-      storage: {{ .Values.persistence.size }}
-  {{- with .Values.persistence.storageClass }}
-  storageClassName: {{ . }}
-  {{- end }}
----
-{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "mlflow.fullname" . }}
   labels:
     {{- include "mlflow.labels" . | nindent 4 }}
+    {{- include "mlflow.server.selectorLabels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
-  strategy:
-    type: Recreate
   selector:
     matchLabels:
-      {{- include "mlflow.selectorLabels" . | nindent 6 }}
+      {{- include "mlflow.server.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "mlflow.selectorLabels" . | nindent 8 }}
+        {{- include "mlflow.server.selectorLabels" . | nindent 8 }}
     spec:
+      # mlflow server fails fast if the backend DB isn't reachable, so wait for it.
+      initContainers:
+        - name: wait-for-db
+          image: "{{ .Values.db.image.repository }}:{{ .Values.db.image.tag }}"
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h {{ include "mlflow.db.fullname" . }} -p {{ .Values.db.service.port }} -U {{ .Values.db.user }}; do
+                echo "waiting for mlflow-db..."; sleep 2
+              done
       containers:
         - name: mlflow
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -49,13 +42,13 @@ spec:
               value: {{ .Values.s3.secretKey | quote }}
             - name: AWS_REGION
               value: {{ .Values.s3.region | quote }}
-          # boto3 is baked into the image; serve with a SQLite backend and the
-          # MinIO-backed artifact store.
+          # boto3 + psycopg2 are baked into the image; serve with the Postgres
+          # backend store and the MinIO-backed artifact store.
           command: ["/bin/sh", "-c"]
           args:
             - |
               mlflow server --host 0.0.0.0 --port {{ .Values.service.port }} \
-                --backend-store-uri sqlite:////mlflow/mlflow.db \
+                --backend-store-uri postgresql://{{ .Values.db.user }}:{{ .Values.db.password }}@{{ include "mlflow.db.fullname" . }}:{{ .Values.db.service.port }}/{{ .Values.db.name }} \
                 --artifacts-destination s3://{{ .Values.s3.bucket }}/ --serve-artifacts
           startupProbe:
             httpGet:
@@ -73,19 +66,8 @@ spec:
               path: /health
               port: http
             periodSeconds: 30
-          volumeMounts:
-            - name: data
-              mountPath: /mlflow
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-      volumes:
-        - name: data
-        {{- if .Values.persistence.enabled }}
-          persistentVolumeClaim:
-            claimName: {{ include "mlflow.fullname" . }}
-        {{- else }}
-          emptyDir: {}
-        {{- end }}
 ---
 apiVersion: v1
 kind: Service
@@ -93,6 +75,7 @@ metadata:
   name: {{ include "mlflow.fullname" . }}
   labels:
     {{- include "mlflow.labels" . | nindent 4 }}
+    {{- include "mlflow.server.selectorLabels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -100,4 +83,4 @@ spec:
       port: {{ .Values.service.port }}
       targetPort: http
   selector:
-    {{- include "mlflow.selectorLabels" . | nindent 4 }}
+    {{- include "mlflow.server.selectorLabels" . | nindent 4 }}
