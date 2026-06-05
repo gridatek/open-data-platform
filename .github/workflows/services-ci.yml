@@ -83,8 +83,15 @@ jobs:
       - name: Create .env from example
         run: cp .env.example .env
 
-      - name: Start Airflow
-        run: docker compose -f docker-compose.yml -f docker-compose.services.yml up -d airflow
+      - name: Start the lakehouse (Trino) + Airflow
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml up -d --build trino airflow
+
+      - name: Wait for Trino
+        run: |
+          for i in $(seq 1 60); do
+            docker compose exec -T trino trino --execute 'SELECT 1' >/dev/null 2>&1 && exit 0
+            echo "waiting for Trino ($i)..."; sleep 5
+          done; exit 1
 
       - name: Wait for Airflow
         run: |
@@ -93,19 +100,28 @@ jobs:
             echo "waiting for Airflow ($i)..."; sleep 10
           done; exit 1
 
-      - name: Assert the example DAG parses and is listed
+      - name: Assert the DAG parses and is listed
         run: |
           for i in $(seq 1 12); do
             if docker compose exec -T airflow airflow dags list | grep -q lakehouse_smoke; then
-              echo "DAG found"; exit 0
+              echo "DAG found"; break
             fi
             echo "waiting for DAG parse ($i)..."; sleep 10
+            [ "$i" = "12" ] && { echo "lakehouse_smoke DAG not found"; exit 1; }
           done
-          echo "lakehouse_smoke DAG not found"; exit 1
+
+      - name: Run the DAG end-to-end (real Trino operators)
+        run: |
+          # extract -> load (Trino write) -> verify (SQLValueCheck count == 4).
+          # `dags test` runs synchronously and fails the step if any task fails.
+          docker compose exec -T airflow airflow dags test lakehouse_smoke 2026-06-01
+          # Belt-and-suspenders: confirm the governed table really has 4 rows.
+          n=$(docker compose exec -T trino trino --execute "SELECT count(*) FROM iceberg.smoke.events" | tr -d '"')
+          echo "row count = $n"; [ "$n" = "4" ]
 
       - name: Dump logs on failure
         if: failure()
-        run: docker compose -f docker-compose.yml -f docker-compose.services.yml logs --no-color airflow
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml logs --no-color airflow trino
 
       - name: Tear down
         if: always()

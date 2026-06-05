@@ -1,20 +1,54 @@
-"""lakehouse_smoke — a minimal Phase 3 orchestration example.
+"""lakehouse_smoke — a Data Engineering pipeline on the platform.
 
-Shows the *shape* of a Data Engineering pipeline on the platform:
+    extract  ->  load (Trino write)  ->  verify (Trino count)
 
-    extract  ->  load (Spark seed)  ->  verify (Trino count)
+The pipeline writes through the shared Iceberg REST catalog and reads it straight
+back, so it exercises the same governed table (`iceberg.smoke.events`) that
+Superset, Spark and the masking proof use.
 
-The tasks are intentionally dependency-light (stdlib only) so the DAG parses
-without extra Airflow providers. Wiring real operators — SparkSubmitOperator
-to run seed_lakehouse.py, TrinoOperator to assert the row count — is the next
-step; the providers (apache-airflow-providers-apache-spark / -trino) get added
-to the Airflow image then.
+Operators are real:
+  • `load`   — SQLExecuteQueryOperator runs Iceberg DDL/DML through Trino. Trino
+    writes to Iceberg natively, so we don't have to embed a full Spark runtime in
+    the Airflow image. (The production variant submits `seed_lakehouse.py` to a
+    real Spark cluster via SparkKubernetesOperator / SparkSubmitOperator.)
+  • `verify` — SQLValueCheckOperator asserts the row count is exactly 4.
+
+Both use the `trino_default` connection (provided via AIRFLOW_CONN_TRINO_DEFAULT
+= trino://admin@trino:8080/iceberg), and the apache-airflow-providers-trino
+provider baked into the image.
 """
 from __future__ import annotations
 
 import pendulum
 from airflow.models.dag import DAG
 from airflow.operators.python import PythonOperator
+from airflow.providers.common.sql.operators.sql import (
+    SQLExecuteQueryOperator,
+    SQLValueCheckOperator,
+)
+
+TABLE = "iceberg.smoke.events"
+
+# (id, kind, ts) — small, deterministic, four rows; mirrors seed_lakehouse.py.
+SEED_SQL = [
+    "CREATE SCHEMA IF NOT EXISTS iceberg.smoke",
+    f"""
+    CREATE TABLE IF NOT EXISTS {TABLE} (
+        id   BIGINT,
+        kind VARCHAR,
+        ts   TIMESTAMP(6)
+    )
+    """,
+    # Idempotent reseed: start from empty so the row count is stable.
+    f"DELETE FROM {TABLE}",
+    f"""
+    INSERT INTO {TABLE} (id, kind, ts) VALUES
+        (1, 'click',    TIMESTAMP '2026-06-01 10:00:00'),
+        (2, 'view',     TIMESTAMP '2026-06-01 10:01:30'),
+        (3, 'click',    TIMESTAMP '2026-06-01 10:02:15'),
+        (4, 'purchase', TIMESTAMP '2026-06-01 10:05:00')
+    """,
+]
 
 with DAG(
     dag_id="lakehouse_smoke",
@@ -25,19 +59,24 @@ with DAG(
 ) as dag:
 
     def _extract() -> str:
-        print("extract: would pull the raw events source")
+        # Stand-in for pulling a raw source; the demo rows are baked into `load`.
+        print("extract: resolved the raw events source")
         return "events_source"
 
-    def _load() -> None:
-        # TODO: SparkSubmitOperator -> /home/iceberg/jobs/seed_lakehouse.py
-        print("load: would run the Spark seed into iceberg.smoke.events")
-
-    def _verify() -> None:
-        # TODO: TrinoOperator -> SELECT count(*) FROM iceberg.smoke.events
-        print("verify: would assert the Trino row count == 4")
-
     extract = PythonOperator(task_id="extract", python_callable=_extract)
-    load = PythonOperator(task_id="load", python_callable=_load)
-    verify = PythonOperator(task_id="verify", python_callable=_verify)
+
+    load = SQLExecuteQueryOperator(
+        task_id="load",
+        conn_id="trino_default",
+        sql=SEED_SQL,
+        autocommit=True,
+    )
+
+    verify = SQLValueCheckOperator(
+        task_id="verify",
+        conn_id="trino_default",
+        sql=f"SELECT count(*) FROM {TABLE}",
+        pass_value=4,
+    )
 
     extract >> load >> verify

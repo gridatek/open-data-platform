@@ -91,7 +91,9 @@ services:
 
   # ── Airflow: orchestration (≈ CDE). Single-process standalone for the laptop. ──
   airflow:
-    image: apache/airflow:2.10.4
+    build:
+      context: ../platform/engineering/airflow
+    image: ghcr.io/gridatek/airflow:latest
     container_name: odp-airflow
     depends_on:
       airflow-db:
@@ -102,6 +104,8 @@ services:
       # because SQLite can't do concurrent writes).
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      # The lakehouse_smoke DAG reads/writes the governed table through Trino.
+      AIRFLOW_CONN_TRINO_DEFAULT: trino://admin@trino:8080/iceberg
     volumes:
       - ../platform/engineering/airflow/dags:/opt/airflow/dags:ro
       - airflow-home:/opt/airflow
