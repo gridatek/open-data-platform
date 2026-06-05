@@ -429,3 +429,51 @@ jobs:
           kubectl -n odp get pods -o wide || true
           kubectl -n odp describe pods || true
           kubectl -n odp logs -l app.kubernetes.io/name=mlflow --tail=150 --all-containers || true
+
+  # Lineage on a real cluster: deploy Atlas standalone and assert it comes up and
+  # its health probes authenticate with the admin creds from the shared Secret
+  # (exec wget, no Basic-auth header baked into the manifest).
+  #
+  # Atlas (embedded HBase + Solr + JanusGraph) is too heavy to reliably reach
+  # Ready inside a GitHub runner's window — so this is BEST-EFFORT
+  # (continue-on-error): it still renders the change + attempts the runtime proof,
+  # but a timeout here doesn't block the PR. The secret/exec-probe change itself
+  # is covered by helm-ci lint/template.
+  atlas-on-kind:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: odp
+
+      - name: Add chart repos
+        run: |
+          helm repo add minio https://charts.min.io/
+          helm repo add trino https://trinodb.github.io/charts
+          helm repo add superset https://apache.github.io/superset
+          helm repo add apache-airflow https://airflow.apache.org
+          helm repo update
+
+      - name: Build chart dependencies
+        run: helm dependency build platform/umbrella
+
+      - name: Install Atlas
+        run: |
+          helm install odp platform/umbrella -n odp --create-namespace \
+            -f platform/umbrella/ci/kind-atlas-values.yaml \
+            --wait --timeout 18m
+
+      - name: Atlas proof — up + authenticated via the Secret
+        run: NS=odp bash platform/governance/atlas-on-kind.sh
+
+      - name: Dump diagnostics on failure
+        if: failure()
+        run: |
+          kubectl -n odp get pods -o wide || true
+          kubectl -n odp describe pods || true
+          kubectl -n odp logs -l app.kubernetes.io/name=atlas --tail=200 || true

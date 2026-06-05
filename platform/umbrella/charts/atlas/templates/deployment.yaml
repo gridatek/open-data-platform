@@ -6,6 +6,10 @@ metadata:
     {{- include "atlas.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  # Atlas (embedded HBase + Solr) can take longer than the 600s default to first
+  # become available; widen the window so the Deployment isn't marked Failed
+  # before the startup probe gets its chance.
+  progressDeadlineSeconds: {{ .Values.progressDeadlineSeconds }}
   selector:
     matchLabels:
       {{- include "atlas.selectorLabels" . | nindent 6 }}
@@ -20,35 +24,49 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           # No command override: the image's default CMD starts Atlas and tails
           # its log from the correct path (see the compose service note).
+          # Atlas admin creds for the health probes. Preferred: from a Secret; the
+          # probes read them as env so no Basic-auth header is baked into the
+          # rendered manifest. (The Atlas image ships these as its admin user.)
+          env:
+            - name: ATLAS_USER
+              {{- if .Values.auth.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.existingSecret }}
+                  key: {{ .Values.auth.userSecretKey }}
+              {{- else }}
+              value: {{ .Values.auth.user | quote }}
+              {{- end }}
+            - name: ATLAS_PASSWORD
+              {{- if .Values.auth.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.existingSecret }}
+                  key: {{ .Values.auth.passwordSecretKey }}
+              {{- else }}
+              value: {{ .Values.auth.password | quote }}
+              {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
           # Embedded HBase/Solr take a few minutes — the startupProbe gates the
-          # liveness check so a slow boot isn't mistaken for a crash.
+          # liveness check so a slow boot isn't mistaken for a crash. The probes
+          # exec wget with the creds from env (httpGet headers can't use Secrets).
           startupProbe:
-            httpGet:
-              path: /api/atlas/admin/version
-              port: http
-              httpHeaders:
-                - name: Authorization
-                  value: {{ printf "Basic %s" (printf "%s:%s" .Values.auth.user .Values.auth.password | b64enc) }}
+            exec:
+              command:
+                {{- include "atlas.probeCommand" . | nindent 16 }}
             periodSeconds: {{ .Values.startup.periodSeconds }}
             failureThreshold: {{ .Values.startup.failureThreshold }}
           readinessProbe:
-            httpGet:
-              path: /api/atlas/admin/version
-              port: http
-              httpHeaders:
-                - name: Authorization
-                  value: {{ printf "Basic %s" (printf "%s:%s" .Values.auth.user .Values.auth.password | b64enc) }}
+            exec:
+              command:
+                {{- include "atlas.probeCommand" . | nindent 16 }}
             periodSeconds: 15
           livenessProbe:
-            httpGet:
-              path: /api/atlas/admin/version
-              port: http
-              httpHeaders:
-                - name: Authorization
-                  value: {{ printf "Basic %s" (printf "%s:%s" .Values.auth.user .Values.auth.password | b64enc) }}
+            exec:
+              command:
+                {{- include "atlas.probeCommand" . | nindent 16 }}
             periodSeconds: 30
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
