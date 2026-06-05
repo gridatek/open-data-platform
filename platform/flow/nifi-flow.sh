@@ -44,16 +44,20 @@ echo "[nifi] starting the flow"
 curl -sS -X PUT "${NIFI}/processors/${GEN_ID}/run-status" -H 'Content-Type: application/json' \
   -d "{\"revision\":{\"version\":$(rev "${GEN_ID}")},\"state\":\"RUNNING\"}" >/dev/null
 
-echo "[nifi] waiting for the flow to produce flowfiles ..."
+# The processor auto-terminates `success`, so flowfiles never leave it
+# (flowFilesOut stays 0). taskCount is what proves it actually ran — each task
+# is one scheduled execution that generated + processed a flowfile.
+echo "[nifi] waiting for the flow to execute (taskCount) ..."
 for i in $(seq 1 30); do
-  OUT=$(curl -sf "${NIFI}/processors/${GEN_ID}" | jq -r '.status.aggregateSnapshot.flowFilesOut // "0"')
-  echo "  flowFilesOut=${OUT} (${i})"
-  if [ "${OUT%% *}" -ge 1 ] 2>/dev/null; then
-    echo "[nifi] OK — NiFi built and ran an automated flow via the REST API (flowFilesOut=${OUT})."
+  STATE=$(curl -sf "${NIFI}/processors/${GEN_ID}" | jq -r '.status.runStatus')
+  TASKS=$(curl -sf "${NIFI}/processors/${GEN_ID}" | jq -r '.status.aggregateSnapshot.taskCount // 0')
+  echo "  runStatus=${STATE} taskCount=${TASKS} (${i})"
+  if [ "${STATE}" = "Running" ] && [ "${TASKS:-0}" -ge 1 ] 2>/dev/null; then
+    echo "[nifi] OK — NiFi built and ran an automated flow via the REST API (taskCount=${TASKS})."
     exit 0
   fi
   sleep 3
 done
 
-echo "[nifi] FAIL — the flow never produced a flowfile." >&2
+echo "[nifi] FAIL — the flow never executed a task." >&2
 exit 1
