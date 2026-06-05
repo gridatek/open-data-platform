@@ -114,9 +114,10 @@ project and not "another docker-compose lakehouse".
 
 ## 4. Repo structure
 
-The **running** stack is wired up in `quickstart/` (docker-compose); `platform/` holds each
-service's configs/assets and the (work-in-progress) Helm charts. Dirs marked *scaffold* are
-README-only placeholders for the K8s path — those services still run, just via compose.
+The **running** stack is wired up two ways: `quickstart/` (docker-compose, the laptop
+subset) and `platform/umbrella/` (the Helm umbrella chart for Kubernetes). `platform/`
+also holds each service's configs/assets. Both paths are complete and proven in CI —
+`services-ci`/`governance-ci`/etc. on compose, `helm-ci` + `kind-ci` on a real cluster.
 
 ```
 open-data-platform/

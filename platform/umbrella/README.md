@@ -4,9 +4,11 @@ Phase 5 packaging: one chart that deploys the platform onto Kubernetes
 (kind/minikube/any cluster). This is the K8s counterpart to the docker-compose
 laptop subset under `quickstart/`.
 
-## Status — in progress
+## Status — complete
 
-Dependencies with **official upstream charts** are wired and version-pinned:
+Every docker-compose service is deployed here, as either an upstream chart or a
+local subchart, and proven on a real (kind) cluster by `kind-ci`. Dependencies
+with **official upstream charts** are wired and version-pinned:
 
 | Service  | Chart    | Version | Repo                              |
 |----------|----------|---------|-----------------------------------|
@@ -98,5 +100,7 @@ helm install odp platform/umbrella -n odp --create-namespace
 Toggle services with `--set <name>.enabled=true|false`. CI runs
 `helm dependency build` + `helm lint` in `.github/workflows/helm-ci.yml`.
 
-> ⚠️ Passwords in `values.yaml` are placeholders. Override with `--set` or a
-> secret before using anywhere real.
+> ⚠️ Credentials live in Kubernetes Secrets (`templates/*-credentials-secret.yaml`,
+> `*-secret.yaml`), with the dev values set from the `*Credentials` / `appSecretKeys`
+> blocks in `values.yaml`. Override those (or set `create: false` and point each
+> `secretName` at your own pre-created Secret) before using anywhere real.
