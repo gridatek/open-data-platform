@@ -1,8 +1,10 @@
 name: analyst-ci
 
 # Track 02 (Data Analyst) proofs, run on docker-compose:
-#  - sql-analytics: builds the analyst's `orders` dataset in Trino and asserts
-#    the Lab 1 aggregate / join / window queries return the expected answers.
+#  - sql-analytics:      builds the analyst's `orders` dataset in Trino and asserts
+#                        the Lab 1 aggregate / join / window queries.
+#  - superset-dashboard: builds a Superset dataset → chart → dashboard over that
+#                        table via the REST API and asserts they exist (Lab 3).
 
 on:
   push:
@@ -10,11 +12,13 @@ on:
     paths:
       - "quickstart/**"
       - "platform/warehouse/**"
+      - "platform/viz/**"
       - ".github/workflows/analyst-ci.yml"
   pull_request:
     paths:
       - "quickstart/**"
       - "platform/warehouse/**"
+      - "platform/viz/**"
       - ".github/workflows/analyst-ci.yml"
   workflow_dispatch:
 
@@ -57,3 +61,57 @@ jobs:
       - name: Tear down
         if: always()
         run: docker compose down -v
+
+  superset-dashboard:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quickstart
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create .env from example
+        run: cp .env.example .env
+
+      - name: Start lakehouse + Superset (and Spark to seed)
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml up -d --build superset spark
+
+      - name: Wait for the Iceberg REST catalog
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8181/v1/config >/dev/null && exit 0
+            echo "waiting for REST ($i)..."; sleep 5
+          done; exit 1
+
+      - name: Wait for Trino
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8080/v1/info >/dev/null && exit 0
+            echo "waiting for Trino ($i)..."; sleep 5
+          done; exit 1
+
+      - name: Seed the demo table (register-trino asserts smoke.events)
+        run: docker compose exec -T spark spark-submit /home/iceberg/jobs/seed_lakehouse.py
+
+      - name: Build the analyst dataset (the orders table)
+        run: bash ../platform/warehouse/run-analytics-sql.sh
+
+      - name: Wait for Superset
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8088/health >/dev/null && exit 0
+            echo "waiting for Superset ($i)..."; sleep 10
+          done; exit 1
+
+      - name: Register Trino as a Superset database
+        run: bash ../platform/viz/register-trino.sh
+
+      - name: Build dataset → chart → dashboard via the Superset API
+        run: bash ../platform/viz/build-dashboard.sh
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml logs --no-color superset trino
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.services.yml down -v
