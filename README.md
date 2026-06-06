@@ -4,8 +4,6 @@ A Kubernetes-native, fully open-source platform that mirrors Cloudera Data Platf
 in *shape*, so learners build it, run it, and use the labs to both master the open data
 stack and prepare for real Cloudera certifications.
 
-Working name: `@gridatek/open-data-platform` (alt codenames: `openruntime`, `lakeforge`).
-
 ---
 
 ## Quickstart (one command)
@@ -80,11 +78,6 @@ flowchart TB
     SDX --> STORE
 ```
 
-> Every box in this diagram now runs — the SDX layer (catalog, Ranger, Atlas, Iceberg),
-> Spark + Airflow, Trino, NiFi + Kafka, Superset, JupyterHub + MLflow, the Operational DB
-> (HBase + Phoenix), and the console — on both docker-compose and the umbrella Helm chart.
-> See §5 for the per-phase status.
-
 ---
 
 ## 3. The stack: each CDP piece → its open-source equivalent
@@ -107,9 +100,6 @@ flowchart TB
 The console row is the part only you can build well — it's what makes this a *platform*
 project and not "another docker-compose lakehouse".
 
-> Every row above runs on both docker-compose and the umbrella Helm chart on Kubernetes.
-> See §5 for status.
-
 ---
 
 ## 4. Repo structure
@@ -127,7 +117,7 @@ open-data-platform/
 │   ├── governance/        # Ranger + Atlas + Trino policies   ← the SDX clone (real)
 │   ├── engineering/       # Airflow DAGs (≈ CDE; Spark jobs live in quickstart/)
 │   ├── warehouse/         # Trino + Iceberg       (scaffold — Trino cfg in quickstart/)
-│   ├── flow/              # NiFi + Kafka          (scaffold)
+│   ├── flow/              # NiFi + Kafka — flow scripts (nifi-flow, kafka→iceberg)
 │   ├── ml/                # MLflow helpers + JupyterHub (≈ CML)
 │   ├── opdb/              # HBase + Phoenix smoke (opdb-ci; overlay + subchart)
 │   ├── viz/               # Superset config
@@ -216,20 +206,3 @@ A Spring Boot API + Angular/Tailwind UI that mirrors Cloudera Manager / Manageme
 - **Multi-environment** — folder-merged env config (dev/staging).
 
 This is the part that makes the project portfolio-grade and genuinely yours.
-
----
-
-## 8. Where it stands / what's next
-
-Phases 0–4 run today as the docker-compose laptop subset and are proven end to end in CI
-(see the table in §5). The SDX clone — the thing that distinguishes this from every other
-lakehouse demo — works: a Ranger policy masks a real Trino query, the console toggles that
-policy live, and Atlas records the lineage.
-
-The platform now also deploys on **Kubernetes** via the umbrella Helm chart
-([`platform/umbrella/`](platform/umbrella/)): every service is an upstream chart or a local
-subchart (including the console API + web), and `kind-ci` proves it on a real cluster — a
-Trino round-trip on the lakehouse, plus the **column-masking proof** (Ranger + the Trino
-plugin enforcing a mask end to end). The console is a real control plane — it edits Ranger policies and, on
-Kubernetes, restarts/scales services through the API (an RBAC'd ServiceAccount). Every row
-of the §3 stack table is built — the platform is feature-complete against this roadmap.
