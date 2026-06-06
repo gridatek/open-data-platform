@@ -62,8 +62,11 @@ echo "[superset] dataset id = ${DS_ID}"
 CHART_ID=$(curl -sS "${auth[@]}" "${SUPERSET_URL}/api/v1/chart/?q=(page_size:100)" \
   | jq -r ".result[] | select(.slice_name==\"${CHART_NAME}\") | .id" | head -1)
 if [ -z "${CHART_ID}" ]; then
-  PARAMS=$(jq -nc --argjson ds "${DS_ID}" '{
-    datasource: ($ds|tostring)+"__table", viz_type: "echarts_timeseries_bar",
+  # Build the "<id>__table" datasource ref in the shell — avoids jq string
+  # concatenation as an object value, which some jq builds reject.
+  DS_REF="${DS_ID}__table"
+  PARAMS=$(jq -nc --arg ds "${DS_REF}" '{
+    datasource: $ds, viz_type: "echarts_timeseries_bar",
     x_axis: "region", groupby: ["region"],
     metrics: [{label:"SUM(amount)", expressionType:"SIMPLE",
                column:{column_name:"amount"}, aggregate:"SUM"}],
