@@ -1,0 +1,58 @@
+name: analyst-ci
+
+# Track 02 (Data Analyst) proofs, run on docker-compose:
+#  - sql-analytics: builds the analyst's `orders` dataset in Trino and asserts
+#    the Lab 1 aggregate / join / window queries return the expected answers.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "quickstart/**"
+      - "platform/warehouse/**"
+      - ".github/workflows/analyst-ci.yml"
+  pull_request:
+    paths:
+      - "quickstart/**"
+      - "platform/warehouse/**"
+      - ".github/workflows/analyst-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  sql-analytics:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quickstart
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create .env from example
+        run: cp .env.example .env
+
+      - name: Start the lakehouse (MinIO + REST catalog + Trino)
+        run: docker compose up -d --build minio minio-init iceberg-rest trino
+
+      - name: Wait for the Iceberg REST catalog
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8181/v1/config >/dev/null && exit 0
+            echo "waiting for REST ($i)..."; sleep 5
+          done; exit 1
+
+      - name: Wait for Trino
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8080/v1/info >/dev/null && exit 0
+            echo "waiting for Trino ($i)..."; sleep 5
+          done; exit 1
+
+      - name: Build the analyst dataset and verify the Lab 1 analytics
+        run: bash ../platform/warehouse/run-analytics-sql.sh
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose logs --no-color trino iceberg-rest
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

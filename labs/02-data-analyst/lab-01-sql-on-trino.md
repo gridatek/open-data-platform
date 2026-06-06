@@ -8,6 +8,11 @@ Use Trino as your Data Warehouse: create a governed Iceberg table, load some
 rows, and answer real questions with `GROUP BY`, joins, and window functions —
 the SQL the Data Analyst exam lives on.
 
+> **Runnable demo (CI-proven):** the whole dataset + every query below is scripted
+> and asserted in `platform/warehouse/run-analytics-sql.sh` (US comes out the top
+> region, `premium` the top tier). `analyst-ci` runs it on each push. To replay it
+> end-to-end in one shot: `../platform/warehouse/run-analytics-sql.sh`.
+
 Open a Trino shell (everything below runs inside it):
 
 ```bash
