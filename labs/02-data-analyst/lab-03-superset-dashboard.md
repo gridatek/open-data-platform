@@ -8,6 +8,13 @@ Superset up, `cd quickstart`
 Turn governed SQL into a dashboard. Superset reads the lakehouse *through Trino*,
 so everything you visualize honors the same Ranger policies — BI on governed data.
 
+> **Runnable demo (CI-proven):** the click-path below (dataset → chart →
+> dashboard) is also scripted end-to-end against the Superset REST API in
+> `platform/viz/build-dashboard.sh`, which `analyst-ci` runs on each push. Prefer
+> clicking to learn it; run the script to prove it: after `register-trino.sh`,
+> `../platform/viz/build-dashboard.sh` builds and verifies the same
+> `Sales overview` dashboard.
+
 Bring up Superset and register the Trino connection (idempotent):
 
 ```bash
