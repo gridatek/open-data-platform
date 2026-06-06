@@ -10,12 +10,15 @@ tools standing in for their Cloudera counterparts.
 
 ## Labs
 
-| # | Lab | Cert objective it maps to |
-|---|-----|---------------------------|
-| 01 | [SQL on Trino](lab-01-sql-on-trino.md) | Query the Data Warehouse: SELECT, GROUP BY, joins, window functions |
-| 02 | [Column masking with Ranger](lab-02-column-masking.md) | Tabular security: column masking & row filtering |
-| 03 | [A Superset dashboard](lab-03-superset-dashboard.md) | Data Visualization over the warehouse |
-| 04 | [Discovery & lineage in Atlas](lab-04-atlas-discovery.md) | Metadata, search, lineage, classifications |
+Every lab has a runnable backing script that a CI workflow executes on each push,
+so the steps you follow by hand are the same ones proven green in CI.
+
+| # | Lab | Cert objective it maps to | Runnable proof (CI) |
+|---|-----|---------------------------|---------------------|
+| 01 | [SQL on Trino](lab-01-sql-on-trino.md) | Query the Data Warehouse: SELECT, GROUP BY, joins, window functions | `platform/warehouse/run-analytics-sql.sh` · `analyst-ci` |
+| 02 | [Column masking with Ranger](lab-02-column-masking.md) | Tabular security: column masking & row filtering | `platform/governance/load-policies.sh` · `governance-ci` |
+| 03 | [A Superset dashboard](lab-03-superset-dashboard.md) | Data Visualization over the warehouse | `platform/viz/build-dashboard.sh` · `analyst-ci` |
+| 04 | [Discovery & lineage in Atlas](lab-04-atlas-discovery.md) | Metadata, search, lineage, classifications | `platform/governance/atlas/register-lineage.sh` · `atlas-ci` |
 
 ## Prerequisites
 
