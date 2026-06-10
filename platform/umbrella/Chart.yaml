@@ -54,6 +54,10 @@ dependencies:
   - name: opdb
     version: "0.1.0"
     condition: opdb.enabled
+  # Local subchart (charts/knox) — the perimeter gateway (≈ CDP Knox).
+  - name: knox
+    version: "0.1.0"
+    condition: knox.enabled
   - name: minio
     version: "5.4.0"
     repository: https://charts.min.io/

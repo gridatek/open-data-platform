@@ -352,6 +352,21 @@ opdb:
   enabled: false
   fullnameOverride: opdb
 
+# ── Perimeter — Apache Knox gateway (local subchart) ─────────
+# Default OFF (additive perimeter; enable when you want a single authenticating
+# entry point). Image published to GHCR by publish-images.yml — make the package
+# public or set global.imagePullSecrets to pull. Stable Service name `knox`.
+# Reach it with: kubectl -n odp port-forward svc/knox 8443:8443
+#   homepage : https://localhost:8443/gateway/homepage/home  (admin/admin-password)
+#   a service: https://localhost:8443/gateway/odp/trino/v1/info
+# Knox authenticates at the edge; Ranger still does fine-grained authz (the CDP
+# split). Backends keep their own Services too — Knox is additive, not a swap.
+# The topology proxies all 11 roles; backends you haven't enabled simply 404
+# until you do. Superset/Airflow URLs are computed from the release name.
+knox:
+  enabled: false
+  fullnameOverride: knox
+
 # ── Ingress (optional) ───────────────────────────────────────
 # Host-based Ingress for the platform UIs/APIs. Default OFF — needs an ingress
 # controller + DNS pointing `<name>.<baseDomain>` at it. List only the services

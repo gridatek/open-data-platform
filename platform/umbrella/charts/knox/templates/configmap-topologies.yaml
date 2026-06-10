@@ -1,0 +1,116 @@
+{{/*
+The gateway topologies, rendered into a ConfigMap and mounted (per-file, via
+subPath) into the image's conf/topologies/ — the K8s counterpart of the compose
+bind-mounts. odp.xml is the platform topology; homepage.xml replaces the shipped
+KnoxSSO-gated homepage with the same basic-auth/demo-LDAP used by odp.
+
+Backend URLs point at the in-cluster Services. The local subcharts pin stable
+names via fullnameOverride (trino, iceberg-rest, ranger-admin, …); Superset and
+Airflow come from upstream charts whose Services are release-prefixed, so their
+defaults are computed from the release name. Any entry is overridable under
+`backends:` in values. Disabled backends simply 404 at the gateway until enabled
+— Knox is additive, same as the compose overlay.
+*/}}
+{{- $b := .Values.backends -}}
+{{- $superset := $b.superset | default (printf "http://%s-superset:8088" .Release.Name) -}}
+{{- $airflow := $b.airflow | default (printf "http://%s-api-server:8080" .Release.Name) -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "knox.fullname" . }}-topologies
+  labels:
+    {{- include "knox.labels" . | nindent 4 }}
+data:
+  odp.xml: |
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!--
+      Open Data Platform gateway topology (K8s). One HTTPS entry point
+      (https://<gateway>/gateway/odp/<service>) in front of every Service in the
+      release. Auth happens here, at the edge, via the bundled demo LDAP;
+      fine-grained authz still lives in Ranger (perimeter vs. policy — the CDP split).
+
+      Demo logins (user / password): admin / admin-password, guest / guest-password.
+    -->
+    <topology>
+        <gateway>
+            <provider>
+                <role>authentication</role>
+                <name>ShiroProvider</name>
+                <enabled>true</enabled>
+                <param><name>sessionTimeout</name><value>30</value></param>
+                <param><name>main.ldapRealm</name><value>org.apache.knox.gateway.shirorealm.KnoxLdapRealm</value></param>
+                <param><name>main.ldapContextFactory</name><value>org.apache.knox.gateway.shirorealm.KnoxLdapContextFactory</value></param>
+                <param><name>main.ldapRealm.contextFactory</name><value>$ldapContextFactory</value></param>
+                <param><name>main.ldapRealm.userDnTemplate</name><value>uid={0},ou=people,dc=hadoop,dc=apache,dc=org</value></param>
+                <!-- localhost: the demo LDAP runs inside this same pod -->
+                <param><name>main.ldapRealm.contextFactory.url</name><value>ldap://localhost:33389</value></param>
+                <param><name>main.ldapRealm.contextFactory.authenticationMechanism</name><value>simple</value></param>
+                <param><name>urls./**</name><value>authcBasic</value></param>
+            </provider>
+            <provider>
+                <role>identity-assertion</role>
+                <name>Default</name>
+                <enabled>true</enabled>
+            </provider>
+        </gateway>
+
+        <!-- Shared data layer (SDX) -->
+        <service><role>ICEBERG</role><url>{{ $b.iceberg | default "http://iceberg-rest:8181" }}</url></service>
+        <service><role>RANGER</role><url>{{ $b.ranger | default "http://ranger-admin:6080" }}</url></service>
+        <service><role>ATLAS</role><url>{{ $b.atlas | default "http://atlas:21000" }}</url></service>
+        <service><role>MINIO</role><url>{{ $b.minio | default "http://minio-console:9001" }}</url></service>
+
+        <!-- Data services -->
+        <service><role>TRINO</role><url>{{ $b.trino | default "http://trino:8080" }}</url></service>
+        <service><role>SUPERSET</role><url>{{ $superset }}</url></service>
+        <service><role>AIRFLOW</role><url>{{ $airflow }}</url></service>
+        <service><role>MLFLOW</role><url>{{ $b.mlflow | default "http://mlflow:5000" }}</url></service>
+        <service><role>NIFI</role><url>{{ $b.nifi | default "http://nifi:8080" }}</url></service>
+        <service><role>JUPYTER</role><url>{{ $b.jupyter | default "http://jupyterhub:8000" }}</url></service>
+
+        <!-- Control plane -->
+        <service><role>CONSOLE</role><url>{{ $b.console | default "http://console-api:8090" }}</url></service>
+    </topology>
+  homepage.xml: |
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!--
+      Knox Homepage — the single "page with all services". Replaces the shipped
+      KnoxSSO-gated homepage with the same basic-auth / demo-LDAP used by odp, so
+      it works without standing up SSO. Browse to /gateway/homepage/home and log
+      in with admin / admin-password to see every topology and its services.
+    -->
+    <topology>
+       <name>homepage</name>
+       <gateway>
+          <provider>
+             <role>webappsec</role>
+             <name>WebAppSec</name>
+             <enabled>true</enabled>
+             <param><name>xframe.options.enabled</name><value>true</value></param>
+             <param><name>xss.protection.enabled</name><value>true</value></param>
+          </provider>
+          <provider>
+             <role>authentication</role>
+             <name>ShiroProvider</name>
+             <enabled>true</enabled>
+             <param><name>sessionTimeout</name><value>30</value></param>
+             <param><name>main.ldapRealm</name><value>org.apache.knox.gateway.shirorealm.KnoxLdapRealm</value></param>
+             <param><name>main.ldapContextFactory</name><value>org.apache.knox.gateway.shirorealm.KnoxLdapContextFactory</value></param>
+             <param><name>main.ldapRealm.contextFactory</name><value>$ldapContextFactory</value></param>
+             <param><name>main.ldapRealm.userDnTemplate</name><value>uid={0},ou=people,dc=hadoop,dc=apache,dc=org</value></param>
+             <param><name>main.ldapRealm.contextFactory.url</name><value>ldap://localhost:33389</value></param>
+             <param><name>main.ldapRealm.contextFactory.authenticationMechanism</name><value>simple</value></param>
+             <param><name>urls./**</name><value>authcBasic</value></param>
+          </provider>
+          <provider>
+             <role>identity-assertion</role>
+             <name>Default</name>
+             <enabled>true</enabled>
+          </provider>
+       </gateway>
+
+       <service><role>KNOX-SESSION</role></service>
+       <service><role>KNOX-METADATA</role></service>
+
+       <application><name>home</name></application>
+    </topology>

@@ -36,4 +36,7 @@ jobs:
         run: helm lint platform/umbrella
 
       - name: Template render (smoke)
-        run: helm template odp platform/umbrella >/dev/null
+        run: |
+          helm template odp platform/umbrella >/dev/null
+          # Knox is default-off, so render it explicitly to exercise its templates.
+          helm template odp platform/umbrella --set knox.enabled=true >/dev/null

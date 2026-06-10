@@ -1,0 +1,9 @@
+# Overrides for the knox-on-kind job — layered on top of kind-values.yaml.
+# kind-values keeps the lakehouse (minio + iceberg-rest + trino) on; enable Knox
+# in front of it. The proof asserts the gateway rejects anonymous access (401)
+# and proxies an authenticated demo-LDAP user through to the Trino Service (200).
+knox:
+  enabled: true
+  image:
+    # Built + `kind load`ed in the job, so pull the local tag, never GHCR.
+    pullPolicy: Never

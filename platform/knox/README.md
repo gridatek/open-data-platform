@@ -54,6 +54,47 @@ https://localhost:8443/gateway/homepage/home
 The backends keep their own direct ports too — Knox is **additive**, not a
 replacement.
 
+## On Kubernetes (umbrella chart)
+
+The same gateway is packaged as a local subchart at
+[`platform/umbrella/charts/knox`](../umbrella/charts/knox), the K8s counterpart
+of the compose overlay. Same image (`platform/knox/Dockerfile`, published to
+GHCR by `publish-images.yml`); the difference is the wiring:
+
+- the two topology files become a **ConfigMap** mounted per-file into
+  `conf/topologies/`, with the backend URLs **templated to the in-cluster
+  Service names** (`http://trino:8080`, `http://ranger-admin:6080`, … —
+  Superset/Airflow are release-prefixed, so computed from the release name);
+- the bundled demo LDAP still runs **in the pod** (no separate identity store);
+- the gateway is a `ClusterIP` Service named `knox` on `:8443`.
+
+It's **default OFF** (additive perimeter). Enable it on top of whatever you've
+turned on:
+
+```bash
+helm upgrade --install odp platform/umbrella -n odp --create-namespace \
+  --set knox.enabled=true
+# reach the gateway:
+kubectl -n odp port-forward svc/knox 8443:8443
+#   homepage : https://localhost:8443/gateway/homepage/home   (admin/admin-password)
+#   a backend: https://localhost:8443/gateway/odp/trino/v1/info
+```
+
+To pull the image, make the GHCR package public (or set
+`global.imagePullSecrets`); or build + load it onto a `kind` node:
+
+```bash
+docker build -t ghcr.io/gridatek/knox:2.0.0 platform/knox
+kind load docker-image ghcr.io/gridatek/knox:2.0.0 --name odp
+helm upgrade --install odp platform/umbrella -n odp \
+  --set knox.enabled=true --set knox.image.pullPolicy=Never
+```
+
+Proven end-to-end on `kind` by the `knox-on-kind` job in `kind-ci.yml` (backed by
+[`knox-on-kind.sh`](knox-on-kind.sh)): the gateway rejects anonymous access
+(401) and proxies an authenticated demo-LDAP user through to the Trino Service
+(200). Override any backend URL under `knox.backends` in the umbrella values.
+
 ## How it's built
 
 Apache doesn't publish an official Knox image, so (like the Ranger image) we
