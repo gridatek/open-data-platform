@@ -53,6 +53,7 @@ they're local subcharts under `charts/` — all now ported:
 | `console`       | ✅ done¹  | Control-plane API (Spring Boot). Env points at the in-cluster Services (Trino pinned to `trino` via `fullnameOverride`); a ServiceAccount + RBAC let it restart/scale Deployments. GHCR image, default on. |
 | `console-web`   | ✅ done¹  | Angular UI served by nginx, which reverse-proxies `/api` → `console-api:8090`. GHCR image, default on; needs `console` (also on by default). |
 | `opdb`          | ✅ done   | Operational DB — HBase + Phoenix all-in-one; Phoenix Query Server on `opdb:8765`. Default off (heavy, standalone). |
+| `hue`           | ✅ done   | Web SQL editor over Trino (≈ CDW SQL editor / Hue); the editor counterpart of Superset's SQL Lab. Public `gethue/hue` image + a ConfigMap `hue.ini` wiring the Trino interpreter at `trino:8080`/`iceberg`. Stable Service `hue:8888`. Default off. `kind-ci` proves it boots (is_alive 200) with the interpreter wired. |
 
 ¹ `ranger`, `jupyterhub`, `console` and `console-web` have no upstream image —
 they're built from `platform/governance/ranger`, `platform/ml/jupyterhub`,

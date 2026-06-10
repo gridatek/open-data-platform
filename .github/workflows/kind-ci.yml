@@ -12,12 +12,14 @@ on:
       - "platform/umbrella/**"
       - "platform/governance/**"
       - "platform/engineering/**"
+      - "platform/hue/**"
       - ".github/workflows/kind-ci.yml"
   pull_request:
     paths:
       - "platform/umbrella/**"
       - "platform/governance/**"
       - "platform/engineering/**"
+      - "platform/hue/**"
       - ".github/workflows/kind-ci.yml"
   workflow_dispatch:
 
@@ -477,3 +479,46 @@ jobs:
           kubectl -n odp get pods -o wide || true
           kubectl -n odp describe pods || true
           kubectl -n odp logs -l app.kubernetes.io/name=atlas --tail=200 || true
+
+  # The SQL editor on a real cluster: deploy Hue in front of the lakehouse and
+  # assert it boots (is_alive 200) with its Trino interpreter wired to the
+  # in-cluster `trino` Service. Public gethue/hue image — the node pulls it.
+  hue-on-kind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: odp
+
+      - name: Add chart repos
+        run: |
+          helm repo add minio https://charts.min.io/
+          helm repo add trino https://trinodb.github.io/charts
+          helm repo add superset https://apache.github.io/superset
+          helm repo add apache-airflow https://airflow.apache.org
+          helm repo update
+
+      - name: Build chart dependencies
+        run: helm dependency build platform/umbrella
+
+      - name: Install the lakehouse + Hue
+        run: |
+          helm install odp platform/umbrella -n odp --create-namespace \
+            -f platform/umbrella/ci/kind-values.yaml \
+            -f platform/umbrella/ci/kind-hue-values.yaml \
+            --wait --timeout 12m
+
+      - name: Hue proof — editor serves (is_alive 200) + Trino interpreter wired
+        run: NS=odp bash platform/hue/hue-on-kind.sh
+
+      - name: Dump diagnostics on failure
+        if: failure()
+        run: |
+          kubectl -n odp get pods -o wide || true
+          kubectl -n odp describe pods || true
+          kubectl -n odp logs -l app.kubernetes.io/name=hue --tail=200 || true
+          kubectl -n odp logs -l app.kubernetes.io/name=trino --tail=120 --all-containers || true

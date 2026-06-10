@@ -47,6 +47,7 @@ https://localhost:8443/gateway/homepage/home
 | MLflow  | `…/gateway/odp/mlflow/` |
 | NiFi    | `…/gateway/odp/nifi/nifi/` |
 | Jupyter | `…/gateway/odp/jupyter/` |
+| Hue     | `…/gateway/odp/hue/` |
 | MinIO   | `…/gateway/odp/minio/` |
 | Iceberg REST | `…/gateway/odp/iceberg/v1/config` |
 | Console | `…/gateway/odp/console/api/services` |
@@ -74,7 +75,7 @@ install Apache's released gateway tarball over `eclipse-temurin:11`:
   without SSO.
 - **`services/<name>/1.0.0/`** — custom reverse-proxy service definitions for
   the backends Knox has no built-in for (Trino, Superset, MLflow, Iceberg REST,
-  MinIO, Jupyter, the console). See [`services/README.md`](services/README.md).
+  MinIO, Jupyter, Hue, the console). See [`services/README.md`](services/README.md).
 
 ## Caveats (laptop reality)
 

@@ -1,0 +1,41 @@
+# Apache Hue — values.
+#
+# K8s port of the docker-compose `hue` service: the web SQL editor over the
+# lakehouse. Runs queries against the in-cluster Trino Service; the editor
+# counterpart of Superset's SQL Lab (≈ CDP CDW SQL editor / Hue).
+
+# Set by the umbrella via `condition: hue.enabled`.
+enabled: false
+
+replicaCount: 1
+
+image:
+  # Public upstream image — no GHCR build needed (Hue's native Trino interface
+  # ships in the image).
+  repository: gethue/hue
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8888
+
+# Trino backend the SQL editor talks to. Defaults to the stable in-cluster
+# `trino` Service, catalog `iceberg` (the governed lakehouse).
+trino:
+  url: http://trino:8080/iceberg
+  user: hue
+
+# Django session/CSRF key. Dev default — override for anything real.
+secretKey: odp-dev-hue-secret-change-me
+
+# Apps to hide — strip Hue to the SQL editor (the Hadoop apps this platform
+# doesn't run would otherwise advertise dead endpoints).
+appBlacklist: hbase,impala,jobbrowser,jobsub,oozie,pig,search,security,spark,sqoop,zookeeper,hive,metastore,indexer,filebrowser
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 512Mi
+  limits:
+    memory: 1Gi

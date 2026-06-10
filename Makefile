@@ -8,12 +8,13 @@ COMPOSE := docker compose --project-directory quickstart \
   -f quickstart/docker-compose.console.yml \
   -f quickstart/docker-compose.opdb.yml \
   -f quickstart/docker-compose.jupyterhub.yml \
-  -f quickstart/docker-compose.knox.yml
+  -f quickstart/docker-compose.knox.yml \
+  -f quickstart/docker-compose.hue.yml
 
 CORE := docker compose --project-directory quickstart -f quickstart/docker-compose.yml
 
 .DEFAULT_GOAL := help
-.PHONY: help env core all governance services console opdb jupyterhub knox seed down ps logs
+.PHONY: help env core all governance services console opdb jupyterhub knox hue seed down ps logs
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -56,6 +57,11 @@ knox: env ## Lakehouse + Knox gateway (the perimeter; add other overlays as need
 	docker compose --project-directory quickstart \
 	  -f quickstart/docker-compose.yml \
 	  -f quickstart/docker-compose.knox.yml up -d --build
+
+hue: env ## Lakehouse + Hue (the web SQL editor over Trino)
+	docker compose --project-directory quickstart \
+	  -f quickstart/docker-compose.yml \
+	  -f quickstart/docker-compose.hue.yml up -d
 
 seed: ## Run the Spark seed job into iceberg.smoke.events
 	$(COMPOSE) exec spark spark-submit /home/iceberg/jobs/seed_lakehouse.py

@@ -1,0 +1,5 @@
+<rules>
+    <rule dir="IN" name="HUE/hue/inbound" pattern="*://*:*/**/hue/{**}?{**}">
+        <rewrite template="{$serviceUrl[HUE]}/{**}?{**}"/>
+    </rule>
+</rules>
