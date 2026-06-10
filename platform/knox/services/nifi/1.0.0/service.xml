@@ -1,0 +1,15 @@
+<!-- NIFI: reverse-proxy passthrough to the in-network backend. APIs and SQL
+     proxy cleanly; UI-heavy backends may need response rewrite rules added. -->
+<service role="NIFI" name="nifi" version="1.0.0">
+    <metadata>
+        <type>UI</type>
+        <context>/nifi/nifi/</context>
+        <shortDesc>NiFi flow authoring (CDF)</shortDesc>
+        <description>NiFi flow authoring (CDF)</description>
+    </metadata>
+    <routes>
+        <route path="/nifi/**?**">
+            <rewrite apply="NIFI/nifi/inbound" to="request.url"/>
+        </route>
+    </routes>
+</service>

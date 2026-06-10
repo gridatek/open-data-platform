@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Open Data Platform gateway topology.
+
+  One HTTPS entry point (https://localhost:8443/gateway/odp/<service>) in front
+  of every service on the `odp` docker network. Authentication happens here, at
+  the edge, via the bundled demo LDAP; fine-grained authorization still lives in
+  Ranger (perimeter vs. policy — the same split as real CDP).
+
+  Demo logins (user / password): admin / admin-password, guest / guest-password.
+  Every backend below is reachable by its docker-compose service name.
+-->
+<topology>
+    <gateway>
+        <provider>
+            <role>authentication</role>
+            <name>ShiroProvider</name>
+            <enabled>true</enabled>
+            <param><name>sessionTimeout</name><value>30</value></param>
+            <param><name>main.ldapRealm</name><value>org.apache.knox.gateway.shirorealm.KnoxLdapRealm</value></param>
+            <param><name>main.ldapContextFactory</name><value>org.apache.knox.gateway.shirorealm.KnoxLdapContextFactory</value></param>
+            <param><name>main.ldapRealm.contextFactory</name><value>$ldapContextFactory</value></param>
+            <param><name>main.ldapRealm.userDnTemplate</name><value>uid={0},ou=people,dc=hadoop,dc=apache,dc=org</value></param>
+            <!-- localhost: the demo LDAP runs inside this same container -->
+            <param><name>main.ldapRealm.contextFactory.url</name><value>ldap://localhost:33389</value></param>
+            <param><name>main.ldapRealm.contextFactory.authenticationMechanism</name><value>simple</value></param>
+            <param><name>urls./**</name><value>authcBasic</value></param>
+        </provider>
+
+        <!-- Authenticated => identity is asserted downstream as a header. -->
+        <provider>
+            <role>identity-assertion</role>
+            <name>Default</name>
+            <enabled>true</enabled>
+        </provider>
+    </gateway>
+
+    <!-- ── Shared data layer (SDX) ─────────────────────────────── -->
+    <service><role>ICEBERG</role><url>http://iceberg-rest:8181</url></service>
+    <service><role>RANGER</role><url>http://ranger-admin:6080</url></service>
+    <service><role>ATLAS</role><url>http://atlas:21000</url></service>
+    <service><role>MINIO</role><url>http://minio:9001</url></service>
+
+    <!-- ── Data services ───────────────────────────────────────── -->
+    <service><role>TRINO</role><url>http://trino:8080</url></service>
+    <service><role>SUPERSET</role><url>http://superset:8088</url></service>
+    <service><role>AIRFLOW</role><url>http://airflow:8080</url></service>
+    <service><role>MLFLOW</role><url>http://mlflow:5000</url></service>
+    <service><role>NIFI</role><url>http://nifi:8080</url></service>
+    <service><role>JUPYTER</role><url>http://spark:8888</url></service>
+
+    <!-- ── Control plane ───────────────────────────────────────── -->
+    <service><role>CONSOLE</role><url>http://console-api:8090</url></service>
+</topology>

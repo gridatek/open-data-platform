@@ -1,0 +1,5 @@
+<rules>
+    <rule dir="IN" name="SUPERSET/superset/inbound" pattern="*://*:*/**/superset/{**}?{**}">
+        <rewrite template="{$serviceUrl[SUPERSET]}/{**}?{**}"/>
+    </rule>
+</rules>

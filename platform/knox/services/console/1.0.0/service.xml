@@ -1,0 +1,15 @@
+<!-- CONSOLE: reverse-proxy passthrough to the in-network backend. APIs and SQL
+     proxy cleanly; UI-heavy backends may need response rewrite rules added. -->
+<service role="CONSOLE" name="console" version="1.0.0">
+    <metadata>
+        <type>UI</type>
+        <context>/console/api/services</context>
+        <shortDesc>Control-plane console</shortDesc>
+        <description>Control-plane console</description>
+    </metadata>
+    <routes>
+        <route path="/console/**?**">
+            <rewrite apply="CONSOLE/console/inbound" to="request.url"/>
+        </route>
+    </routes>
+</service>

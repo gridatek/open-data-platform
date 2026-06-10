@@ -1,0 +1,5 @@
+<rules>
+    <rule dir="IN" name="ATLAS/atlas/inbound" pattern="*://*:*/**/atlas/{**}?{**}">
+        <rewrite template="{$serviceUrl[ATLAS]}/{**}?{**}"/>
+    </rule>
+</rules>

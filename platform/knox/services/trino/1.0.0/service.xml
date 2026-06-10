@@ -1,0 +1,15 @@
+<!-- TRINO: reverse-proxy passthrough to the in-network backend. APIs and SQL
+     proxy cleanly; UI-heavy backends may need response rewrite rules added. -->
+<service role="TRINO" name="trino" version="1.0.0">
+    <metadata>
+        <type>UI</type>
+        <context>/trino/ui/</context>
+        <shortDesc>Trino SQL query engine (CDW)</shortDesc>
+        <description>Trino SQL query engine (CDW)</description>
+    </metadata>
+    <routes>
+        <route path="/trino/**?**">
+            <rewrite apply="TRINO/trino/inbound" to="request.url"/>
+        </route>
+    </routes>
+</service>

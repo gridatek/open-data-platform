@@ -1,0 +1,15 @@
+<!-- AIRFLOW: reverse-proxy passthrough to the in-network backend. APIs and SQL
+     proxy cleanly; UI-heavy backends may need response rewrite rules added. -->
+<service role="AIRFLOW" name="airflow" version="1.0.0">
+    <metadata>
+        <type>UI</type>
+        <context>/airflow/home</context>
+        <shortDesc>Airflow orchestration (CDE)</shortDesc>
+        <description>Airflow orchestration (CDE)</description>
+    </metadata>
+    <routes>
+        <route path="/airflow/**?**">
+            <rewrite apply="AIRFLOW/airflow/inbound" to="request.url"/>
+        </route>
+    </routes>
+</service>

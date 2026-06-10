@@ -1,0 +1,5 @@
+<rules>
+    <rule dir="IN" name="JUPYTER/jupyter/inbound" pattern="*://*:*/**/jupyter/{**}?{**}">
+        <rewrite template="{$serviceUrl[JUPYTER]}/{**}?{**}"/>
+    </rule>
+</rules>

@@ -1,0 +1,5 @@
+<rules>
+    <rule dir="IN" name="CONSOLE/console/inbound" pattern="*://*:*/**/console/{**}?{**}">
+        <rewrite template="{$serviceUrl[CONSOLE]}/{**}?{**}"/>
+    </rule>
+</rules>

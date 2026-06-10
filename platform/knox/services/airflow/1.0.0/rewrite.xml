@@ -1,0 +1,5 @@
+<rules>
+    <rule dir="IN" name="AIRFLOW/airflow/inbound" pattern="*://*:*/**/airflow/{**}?{**}">
+        <rewrite template="{$serviceUrl[AIRFLOW]}/{**}?{**}"/>
+    </rule>
+</rules>
