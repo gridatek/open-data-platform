@@ -1,0 +1,5 @@
+<rules>
+    <rule dir="IN" name="RANGER/ranger/inbound" pattern="*://*:*/**/ranger/{**}?{**}">
+        <rewrite template="{$serviceUrl[RANGER]}/{**}?{**}"/>
+    </rule>
+</rules>

@@ -1,0 +1,15 @@
+<!-- MLFLOW: reverse-proxy passthrough to the in-network backend. APIs and SQL
+     proxy cleanly; UI-heavy backends may need response rewrite rules added. -->
+<service role="MLFLOW" name="mlflow" version="1.0.0">
+    <metadata>
+        <type>UI</type>
+        <context>/mlflow/</context>
+        <shortDesc>MLflow tracking (CML)</shortDesc>
+        <description>MLflow tracking (CML)</description>
+    </metadata>
+    <routes>
+        <route path="/mlflow/**?**">
+            <rewrite apply="MLFLOW/mlflow/inbound" to="request.url"/>
+        </route>
+    </routes>
+</service>

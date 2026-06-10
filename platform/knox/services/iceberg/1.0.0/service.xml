@@ -1,0 +1,15 @@
+<!-- ICEBERG: reverse-proxy passthrough to the in-network backend. APIs and SQL
+     proxy cleanly; UI-heavy backends may need response rewrite rules added. -->
+<service role="ICEBERG" name="iceberg" version="1.0.0">
+    <metadata>
+        <type>UI</type>
+        <context>/iceberg/v1/config</context>
+        <shortDesc>Iceberg REST catalog (SDX)</shortDesc>
+        <description>Iceberg REST catalog (SDX)</description>
+    </metadata>
+    <routes>
+        <route path="/iceberg/**?**">
+            <rewrite apply="ICEBERG/iceberg/inbound" to="request.url"/>
+        </route>
+    </routes>
+</service>

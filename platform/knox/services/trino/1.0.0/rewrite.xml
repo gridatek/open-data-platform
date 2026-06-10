@@ -1,0 +1,5 @@
+<rules>
+    <rule dir="IN" name="TRINO/trino/inbound" pattern="*://*:*/**/trino/{**}?{**}">
+        <rewrite template="{$serviceUrl[TRINO]}/{**}?{**}"/>
+    </rule>
+</rules>

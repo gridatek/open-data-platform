@@ -94,6 +94,7 @@ flowchart TB
 | Cloudera AI / CML               | JupyterHub + MLflow                     |
 | Operational Database            | HBase + Phoenix                         |
 | Data Visualization              | Apache Superset                         |
+| Perimeter gateway (Knox)        | Apache Knox (`platform/knox`, compose overlay) |
 | Cluster orchestration / runtime | Kubernetes (Minikube/Kind) + Helm       |
 | Cloudera Manager / Mgmt Console | **custom Angular + Spring Boot console**|
 
@@ -115,6 +116,7 @@ open-data-platform/
 │   ├── storage/           # MinIO                 (scaffold — runs via compose)
 │   ├── catalog/           # Nessie/Polaris + Hive Metastore (scaffold)
 │   ├── governance/        # Ranger + Atlas + Trino policies   ← the SDX clone (real)
+│   ├── knox/              # Apache Knox gateway — the perimeter (compose overlay)
 │   ├── engineering/       # Airflow DAGs (≈ CDE; Spark jobs live in quickstart/)
 │   ├── warehouse/         # Trino + Iceberg       (scaffold — Trino cfg in quickstart/)
 │   ├── flow/              # NiFi + Kafka — flow scripts (nifi-flow, kafka→iceberg)

@@ -1,0 +1,15 @@
+<!-- JUPYTER: reverse-proxy passthrough to the in-network backend. APIs and SQL
+     proxy cleanly; UI-heavy backends may need response rewrite rules added. -->
+<service role="JUPYTER" name="jupyter" version="1.0.0">
+    <metadata>
+        <type>UI</type>
+        <context>/jupyter/</context>
+        <shortDesc>Spark and Jupyter notebooks</shortDesc>
+        <description>Spark and Jupyter notebooks</description>
+    </metadata>
+    <routes>
+        <route path="/jupyter/**?**">
+            <rewrite apply="JUPYTER/jupyter/inbound" to="request.url"/>
+        </route>
+    </routes>
+</service>

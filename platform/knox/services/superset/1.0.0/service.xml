@@ -1,0 +1,15 @@
+<!-- SUPERSET: reverse-proxy passthrough to the in-network backend. APIs and SQL
+     proxy cleanly; UI-heavy backends may need response rewrite rules added. -->
+<service role="SUPERSET" name="superset" version="1.0.0">
+    <metadata>
+        <type>UI</type>
+        <context>/superset/</context>
+        <shortDesc>Superset dashboards (Data Viz)</shortDesc>
+        <description>Superset dashboards (Data Viz)</description>
+    </metadata>
+    <routes>
+        <route path="/superset/**?**">
+            <rewrite apply="SUPERSET/superset/inbound" to="request.url"/>
+        </route>
+    </routes>
+</service>

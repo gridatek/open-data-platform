@@ -1,0 +1,52 @@
+# ───────────────────────────────────────────────────────────────
+# Apache Knox Gateway — the perimeter (≈ CDP Knox).
+#
+# One HTTPS entry point in front of every service on the `odp` network.
+# Overlay it on whatever you're running, e.g. the whole platform:
+#
+#   docker compose \
+#     -f docker-compose.yml \
+#     -f docker-compose.governance.yml \
+#     -f docker-compose.services.yml \
+#     -f docker-compose.console.yml \
+#     -f docker-compose.knox.yml \
+#     up -d --build
+#
+#   Gateway homepage : https://localhost:8443/gateway/homepage/home  (self-signed TLS)
+#   A service        : https://localhost:8443/gateway/odp/trino/ui/
+#
+#   Demo logins: admin / admin-password   ·   guest / guest-password
+#
+# Knox authenticates at the edge; Ranger still does fine-grained authz
+# (perimeter vs. policy — the CDP split). Backends keep their own ports too;
+# Knox is additive, not a replacement.
+# ───────────────────────────────────────────────────────────────
+
+name: odp-quickstart
+
+services:
+  knox:
+    build:
+      context: ../platform/knox
+    image: odp/knox:2.0.0
+    container_name: odp-knox
+    environment:
+      # Master secret protects the gateway keystore. Override for anything real.
+      KNOX_MASTER_SECRET: ${KNOX_MASTER_SECRET:-knoxsecret}
+      # Bundled ApacheDS demo LDAP as the laptop identity store.
+      KNOX_DEMO_LDAP: "true"
+    ports:
+      - "8443:8443"   # gateway (HTTPS)
+    volumes:
+      # Mount the single topology file (not the dir) so Knox's shipped default
+      # topologies — admin, manager and the homepage app — stay in place.
+      # The topology is the live wiring: edit it and Knox redeploys on the fly.
+      - ../platform/knox/topology/odp.xml:/opt/knox/conf/topologies/odp.xml:ro
+      # Replace the shipped homepage (KnoxSSO-gated) with a basic-auth one.
+      - ../platform/knox/topology/homepage.xml:/opt/knox/conf/topologies/homepage.xml:ro
+    networks:
+      - odp
+
+networks:
+  odp:
+    name: odp

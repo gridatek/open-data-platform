@@ -1,0 +1,15 @@
+<!-- MINIO: reverse-proxy passthrough to the in-network backend. APIs and SQL
+     proxy cleanly; UI-heavy backends may need response rewrite rules added. -->
+<service role="MINIO" name="minio" version="1.0.0">
+    <metadata>
+        <type>UI</type>
+        <context>/minio/</context>
+        <shortDesc>MinIO object-store console</shortDesc>
+        <description>MinIO object-store console</description>
+    </metadata>
+    <routes>
+        <route path="/minio/**?**">
+            <rewrite apply="MINIO/minio/inbound" to="request.url"/>
+        </route>
+    </routes>
+</service>

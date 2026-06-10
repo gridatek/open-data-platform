@@ -1,0 +1,5 @@
+<rules>
+    <rule dir="IN" name="MLFLOW/mlflow/inbound" pattern="*://*:*/**/mlflow/{**}?{**}">
+        <rewrite template="{$serviceUrl[MLFLOW]}/{**}?{**}"/>
+    </rule>
+</rules>

@@ -1,0 +1,15 @@
+<!-- RANGER: reverse-proxy passthrough to the in-network backend. APIs and SQL
+     proxy cleanly; UI-heavy backends may need response rewrite rules added. -->
+<service role="RANGER" name="ranger" version="1.0.0">
+    <metadata>
+        <type>UI</type>
+        <context>/ranger/index.html</context>
+        <shortDesc>Ranger policy admin (governance)</shortDesc>
+        <description>Ranger policy admin (governance)</description>
+    </metadata>
+    <routes>
+        <route path="/ranger/**?**">
+            <rewrite apply="RANGER/ranger/inbound" to="request.url"/>
+        </route>
+    </routes>
+</service>

@@ -1,0 +1,5 @@
+<rules>
+    <rule dir="IN" name="NIFI/nifi/inbound" pattern="*://*:*/**/nifi/{**}?{**}">
+        <rewrite template="{$serviceUrl[NIFI]}/{**}?{**}"/>
+    </rule>
+</rules>
