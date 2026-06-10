@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "hue.fullname" . }}
+  labels:
+    {{- include "hue.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    # SQLite metadata lives in the pod (emptyDir), so don't run two at once.
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "hue.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "hue.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with (default dict .Values.global).imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: hue
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+          volumeMounts:
+            # Override file (sorts after the shipped hue.ini). subPath keeps the
+            # rest of the conf dir intact.
+            - name: config
+              mountPath: /usr/share/hue/desktop/conf/z-hue.ini
+              subPath: z-hue.ini
+              readOnly: true
+          # Hue boots slowly (Django migrate + app load); hold liveness off until
+          # the HTTP port answers, then probe the unauthenticated health endpoint.
+          startupProbe:
+            httpGet:
+              path: /desktop/debug/is_alive
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /desktop/debug/is_alive
+              port: http
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /desktop/debug/is_alive
+              port: http
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "hue.fullname" . }}

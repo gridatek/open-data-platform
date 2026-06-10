@@ -48,6 +48,7 @@
     <service><role>MLFLOW</role><url>http://mlflow:5000</url></service>
     <service><role>NIFI</role><url>http://nifi:8080</url></service>
     <service><role>JUPYTER</role><url>http://spark:8888</url></service>
+    <service><role>HUE</role><url>http://hue:8888</url></service>
 
     <!-- ── Control plane ───────────────────────────────────────── -->
     <service><role>CONSOLE</role><url>http://console-api:8090</url></service>

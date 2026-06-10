@@ -352,6 +352,16 @@ opdb:
   enabled: false
   fullnameOverride: opdb
 
+# ── SQL editor — Apache Hue (local subchart) ─────────────────
+# Public image (gethue/hue), default off. The web SQL editor over the lakehouse
+# — the editor counterpart of Superset's SQL Lab (≈ CDP CDW SQL editor / Hue).
+# Its Trino interpreter points at the in-cluster `trino` Service / `iceberg`
+# catalog. Stable Service name `hue` on :8888. Reach it with:
+#   kubectl -n odp port-forward svc/hue 8888:8888   (first login = superuser)
+hue:
+  enabled: false
+  fullnameOverride: hue
+
 # ── Ingress (optional) ───────────────────────────────────────
 # Host-based Ingress for the platform UIs/APIs. Default OFF — needs an ingress
 # controller + DNS pointing `<name>.<baseDomain>` at it. List only the services

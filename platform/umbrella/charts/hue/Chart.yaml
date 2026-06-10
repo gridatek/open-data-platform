@@ -1,0 +1,9 @@
+apiVersion: v2
+name: hue
+description: >-
+  Apache Hue — the web SQL editor over the lakehouse (≈ CDP CDW SQL editor / Hue).
+  Runs queries against the platform's Trino engine; the editor counterpart of
+  Superset's SQL Lab. Ported from the docker-compose `hue` service.
+type: application
+version: 0.1.0
+appVersion: "latest"
