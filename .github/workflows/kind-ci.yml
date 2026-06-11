@@ -13,6 +13,7 @@ on:
       - "platform/governance/**"
       - "platform/engineering/**"
       - "platform/hue/**"
+      - "platform/knox/**"
       - ".github/workflows/kind-ci.yml"
   pull_request:
     paths:
@@ -20,6 +21,7 @@ on:
       - "platform/governance/**"
       - "platform/engineering/**"
       - "platform/hue/**"
+      - "platform/knox/**"
       - ".github/workflows/kind-ci.yml"
   workflow_dispatch:
 
@@ -521,4 +523,52 @@ jobs:
           kubectl -n odp get pods -o wide || true
           kubectl -n odp describe pods || true
           kubectl -n odp logs -l app.kubernetes.io/name=hue --tail=200 || true
+          kubectl -n odp logs -l app.kubernetes.io/name=trino --tail=120 --all-containers || true
+
+  # The perimeter on a real cluster: deploy Knox in front of the lakehouse and
+  # assert it authenticates at the edge — anonymous requests are rejected (401)
+  # and a demo-LDAP user is proxied through to the in-cluster Trino Service (200).
+  knox-on-kind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: odp
+
+      - name: Build and load the Knox gateway image
+        run: |
+          docker build -t ghcr.io/gridatek/knox:2.0.0 platform/knox
+          kind load docker-image ghcr.io/gridatek/knox:2.0.0 --name odp
+
+      - name: Add chart repos
+        run: |
+          helm repo add minio https://charts.min.io/
+          helm repo add trino https://trinodb.github.io/charts
+          helm repo add superset https://apache.github.io/superset
+          helm repo add apache-airflow https://airflow.apache.org
+          helm repo update
+
+      - name: Build chart dependencies
+        run: helm dependency build platform/umbrella
+
+      - name: Install the lakehouse + Knox
+        run: |
+          helm install odp platform/umbrella -n odp --create-namespace \
+            -f platform/umbrella/ci/kind-values.yaml \
+            -f platform/umbrella/ci/kind-knox-values.yaml \
+            --wait --timeout 12m
+
+      - name: Knox proof — edge auth (401) + authenticated proxy to Trino (200)
+        run: NS=odp bash platform/knox/knox-on-kind.sh
+
+      - name: Dump diagnostics on failure
+        if: failure()
+        run: |
+          kubectl -n odp get pods -o wide || true
+          kubectl -n odp describe pods || true
+          kubectl -n odp logs -l app.kubernetes.io/name=knox --tail=200 || true
           kubectl -n odp logs -l app.kubernetes.io/name=trino --tail=120 --all-containers || true

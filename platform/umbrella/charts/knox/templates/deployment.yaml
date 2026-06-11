@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "knox.fullname" . }}
+  labels:
+    {{- include "knox.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "knox.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        # Roll the pod when the topologies change (Knox redeploys on file change,
+        # but a subPath ConfigMap mount doesn't update in place — restart to pick it up).
+        checksum/topologies: {{ include (print $.Template.BasePath "/configmap-topologies.yaml") . | sha256sum }}
+      labels:
+        {{- include "knox.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with (default dict .Values.global).imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: knox
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: gateway
+              containerPort: 8443
+          env:
+            # Master secret protects the gateway keystore (>= 6 chars; doubles as
+            # the keytool keystore password). Override for anything real.
+            - name: KNOX_MASTER_SECRET
+              {{- if .Values.masterSecret.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.masterSecret.existingSecret }}
+                  key: {{ .Values.masterSecret.existingSecretKey }}
+              {{- else }}
+              value: {{ .Values.masterSecret.value | quote }}
+              {{- end }}
+            # Bundled ApacheDS demo LDAP as the in-pod identity store (admin/guest/…).
+            - name: KNOX_DEMO_LDAP
+              value: "true"
+          volumeMounts:
+            # Per-file (subPath) mounts so the image's shipped topologies (admin,
+            # manager) stay in place; odp.xml is added and homepage.xml replaced.
+            - name: topologies
+              mountPath: /opt/knox/conf/topologies/odp.xml
+              subPath: odp.xml
+              readOnly: true
+            - name: topologies
+              mountPath: /opt/knox/conf/topologies/homepage.xml
+              subPath: homepage.xml
+              readOnly: true
+          readinessProbe:
+            tcpSocket:
+              port: gateway
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: gateway
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: topologies
+          configMap:
+            name: {{ include "knox.fullname" . }}-topologies

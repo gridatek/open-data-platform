@@ -54,14 +54,17 @@ they're local subcharts under `charts/` — all now ported:
 | `console-web`   | ✅ done¹  | Angular UI served by nginx, which reverse-proxies `/api` → `console-api:8090`. GHCR image, default on; needs `console` (also on by default). |
 | `opdb`          | ✅ done   | Operational DB — HBase + Phoenix all-in-one; Phoenix Query Server on `opdb:8765`. Default off (heavy, standalone). |
 | `hue`           | ✅ done   | Web SQL editor over Trino (≈ CDW SQL editor / Hue); the editor counterpart of Superset's SQL Lab. Public `gethue/hue` image + a ConfigMap `hue.ini` wiring the Trino interpreter at `trino:8080`/`iceberg`. Stable Service `hue:8888`. Default off. `kind-ci` proves it boots (is_alive 200) with the interpreter wired. |
+| `knox`          | ✅ done¹  | Perimeter gateway (≈ CDP Knox). One authenticating HTTPS entry point (`knox:8443`) that proxies every Service; topologies are a templated ConfigMap, demo LDAP runs in-pod. Additive to Ranger. Default off. `kind-ci` proves edge auth (401) + authenticated proxy to Trino (200). |
 
-¹ `ranger`, `jupyterhub`, `console` and `console-web` have no upstream image —
+¹ `ranger`, `jupyterhub`, `console`, `console-web` and `knox` have no upstream image —
 they're built from `platform/governance/ranger`, `platform/ml/jupyterhub`,
-`console/api` and `console/web` and **published to GHCR** by
+`console/api`, `console/web` and `platform/knox` and **published to GHCR** by
 [`publish-images.yml`](../../.github/workflows/publish-images.yml). Their chart
 `image.repository` defaults to those `ghcr.io/gridatek/*` images, and the umbrella
-now **defaults them on** — so `helm install odp platform/umbrella` deploys the
-governed lakehouse + Ranger + the console out of the box.
+**defaults the first four on** — so `helm install odp platform/umbrella` deploys
+the governed lakehouse + Ranger + the console out of the box. `knox` is the
+exception: same GHCR image, but **default off** (it's an additive perimeter —
+enable with `--set knox.enabled=true`).
 
 > **Prerequisite:** the GHCR packages start **private**. Set them public (or add
 > an `imagePullSecret`) so the cluster can pull, otherwise these pods
@@ -75,7 +78,8 @@ docker build -t ghcr.io/gridatek/ranger-admin:2.4.0 platform/governance/ranger
 docker build -t ghcr.io/gridatek/jupyterhub:latest  platform/ml/jupyterhub
 docker build -t ghcr.io/gridatek/console-api:latest  console/api
 docker build -t ghcr.io/gridatek/console-web:latest  console/web
-for i in ranger-admin:2.4.0 jupyterhub:latest console-api:latest console-web:latest; do
+docker build -t ghcr.io/gridatek/knox:2.0.0          platform/knox
+for i in ranger-admin:2.4.0 jupyterhub:latest console-api:latest console-web:latest knox:2.0.0; do
   kind load docker-image ghcr.io/gridatek/$i
 done
 ```

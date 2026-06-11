@@ -1,0 +1,10 @@
+apiVersion: v2
+name: knox
+description: >-
+  Apache Knox gateway — the platform perimeter (≈ CDP Knox). One HTTPS entry
+  point that reverse-proxies every in-cluster service and authenticates at the
+  edge via a bundled demo LDAP. Additive to Ranger (perimeter auth vs.
+  fine-grained policy). Ported from the docker-compose `knox` service.
+type: application
+version: 0.1.0
+appVersion: "2.0.0"

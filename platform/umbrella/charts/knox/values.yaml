@@ -1,0 +1,61 @@
+# Apache Knox gateway — values.
+#
+# K8s port of the docker-compose `knox` service: the platform perimeter. One
+# HTTPS entry point (port 8443) that reverse-proxies every in-cluster Service and
+# authenticates at the edge via a bundled demo LDAP. Additive to Ranger
+# (perimeter auth vs. fine-grained policy — the CDP split).
+
+# Set by the umbrella via `condition: knox.enabled`.
+enabled: false
+
+replicaCount: 1
+
+image:
+  # Built from platform/knox and published by publish-images.yml. Make the GHCR
+  # package public (or set global.imagePullSecrets) to pull; or build + `kind
+  # load` it locally (see platform/knox/README.md).
+  repository: ghcr.io/gridatek/knox
+  tag: "2.0.0"
+  pullPolicy: IfNotPresent
+
+service:
+  # ClusterIP by default — reach the gateway with `kubectl port-forward`. Switch
+  # to NodePort (and optionally pin nodePort) to expose it on a kind node.
+  type: ClusterIP
+  port: 8443
+  nodePort: ""
+
+# Master secret protecting the gateway keystore (>= 6 chars). Dev default; for a
+# real cluster set existingSecret to a Secret holding the master secret.
+masterSecret:
+  value: knoxsecret
+  existingSecret: ""
+  existingSecretKey: master-secret
+
+# Backend Service URLs the gateway proxies to. Empty = use the in-cluster default
+# shown in the comment. The local subcharts pin stable names (fullnameOverride);
+# Superset/Airflow come from upstream charts whose Services are release-prefixed,
+# so their defaults are computed from the release name (e.g. odp-superset:8088).
+# Disabled backends just 404 at the gateway until you enable them.
+backends:
+  iceberg: ""    # http://iceberg-rest:8181
+  ranger: ""     # http://ranger-admin:6080
+  atlas: ""      # http://atlas:21000
+  minio: ""      # http://minio-console:9001
+  trino: ""      # http://trino:8080
+  superset: ""   # http://<release>-superset:8088
+  airflow: ""    # http://<release>-api-server:8080
+  mlflow: ""     # http://mlflow:5000
+  nifi: ""       # http://nifi:8080
+  jupyter: ""    # http://jupyterhub:8000
+  console: ""    # http://console-api:8090
+
+# Two JVMs share this container — the gateway and the bundled demo LDAP
+# (ApacheDS) — so their combined RSS (heaps + metaspace + threads) needs headroom
+# above 1Gi, otherwise the pod is OOMKilled (exit 137) into CrashLoopBackOff.
+resources:
+  requests:
+    cpu: 100m
+    memory: 1Gi
+  limits:
+    memory: 2Gi

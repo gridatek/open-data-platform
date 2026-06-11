@@ -20,6 +20,7 @@ on:
       - "platform/viz/superset/**"
       - "platform/ml/mlflow/**"
       - "platform/engineering/airflow/Dockerfile"
+      - "platform/knox/**"
       - ".github/workflows/publish-images.yml"
   workflow_dispatch:
 
@@ -55,6 +56,11 @@ jobs:
           - name: airflow
             context: platform/engineering/airflow
             version: ""
+          # Knox perimeter gateway — same single 2.0.0 release in compose and the
+          # umbrella, so :latest + :2.0.0 both point at it.
+          - name: knox
+            context: platform/knox
+            version: "2.0.0"
           # 3.2.0 variant for the umbrella Helm chart (its appVersion). Tagged
           # :3.2.0 only, so it doesn't overwrite the compose :latest (2.10.4).
           - name: airflow
