@@ -89,7 +89,7 @@ flowchart TB
 | SDX catalog / metastore         | Nessie or Polaris (Iceberg REST), or Hive Metastore |
 | SDX governance / lineage        | Apache Ranger + Apache Atlas (or DataHub) |
 | CDE — Data Engineering          | Spark + Airflow                         |
-| CDW — Data Warehouse            | Trino + Iceberg (or Impala)             |
+| CDW — Data Warehouse            | Trino + Iceberg (or Impala); Hue as the SQL editor |
 | CDF — Data Flow / streaming     | NiFi + Kafka                            |
 | Cloudera AI / CML               | JupyterHub + MLflow                     |
 | Operational Database            | HBase + Phoenix                         |
@@ -123,6 +123,7 @@ open-data-platform/
 │   ├── ml/                # MLflow helpers + JupyterHub (≈ CML)
 │   ├── opdb/              # HBase + Phoenix smoke (opdb-ci; overlay + subchart)
 │   ├── viz/               # Superset config
+│   ├── hue/               # Apache Hue — web SQL editor over Trino (overlay + subchart)
 │   └── umbrella/          # umbrella Helm chart — the full K8s deploy (helm-ci + kind-ci)
 ├── console/               # control plane (≈ Cloudera Manager)
 │   ├── api/               # Spring Boot: K8s client, health, catalog, Ranger admin

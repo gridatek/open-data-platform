@@ -1,0 +1,40 @@
+# ───────────────────────────────────────────────────────────────
+# Apache Hue — the SQL editor over the lakehouse (≈ CDP CDW SQL editor / Hue).
+#
+# Hue is the web SQL editor for the platform's Trino engine — the same role Hue
+# plays in a Cloudera cluster, and the editor counterpart of Superset's SQL Lab.
+# Overlay it on the base lakehouse (it needs Trino):
+#
+#   docker compose --project-directory quickstart \
+#     -f quickstart/docker-compose.yml \
+#     -f quickstart/docker-compose.hue.yml up -d
+#   # or: make hue
+#
+#   Hue : http://localhost:8889   (first login becomes the superuser)
+#
+# The editor's "Trino" dialect runs queries against the governed Iceberg tables,
+# e.g.  SELECT * FROM iceberg.smoke.events
+# ───────────────────────────────────────────────────────────────
+
+name: odp-quickstart
+
+services:
+  hue:
+    image: gethue/hue:latest
+    container_name: odp-hue
+    depends_on:
+      trino:
+        condition: service_started
+    volumes:
+      # Override file (z-*.ini sorts last) — strips Hue to the SQL editor and
+      # wires the Trino interpreter. See platform/hue/hue.ini.
+      - ../platform/hue/hue.ini:/usr/share/hue/desktop/conf/z-hue.ini:ro
+    ports:
+      # Host 8889 (8888 is Spark's Jupyter in the core lakehouse).
+      - "8889:8888"
+    networks:
+      - odp
+
+networks:
+  odp:
+    name: odp

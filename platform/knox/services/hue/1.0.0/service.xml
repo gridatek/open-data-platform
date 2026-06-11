@@ -1,0 +1,16 @@
+<!-- HUE: reverse-proxy passthrough to the in-network backend. The SQL editor's
+     API proxies cleanly; like other UIs it emits absolute links a plain
+     passthrough doesn't rewrite, so deep links may need OUT rules later. -->
+<service role="HUE" name="hue" version="1.0.0">
+    <metadata>
+        <type>UI</type>
+        <context>/hue/</context>
+        <shortDesc>Hue SQL editor (CDW)</shortDesc>
+        <description>Hue SQL editor (CDW)</description>
+    </metadata>
+    <routes>
+        <route path="/hue/**?**">
+            <rewrite apply="HUE/hue/inbound" to="request.url"/>
+        </route>
+    </routes>
+</service>

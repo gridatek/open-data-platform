@@ -1,0 +1,34 @@
+{{/*
+Hue config overlay, mounted as z-hue.ini so it sorts last and overrides the
+image's shipped hue.ini. Mirrors platform/hue/hue.ini (the compose overlay); the
+Trino URL points at the in-cluster `trino` Service and is overridable via
+.Values.trino.url.
+*/}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "hue.fullname" . }}
+  labels:
+    {{- include "hue.labels" . | nindent 4 }}
+data:
+  z-hue.ini: |
+    [desktop]
+      http_host=0.0.0.0
+      http_port={{ .Values.service.port }}
+      secret_key={{ .Values.secretKey }}
+      # Trim Hue to the SQL editor — drop the Hadoop apps this platform doesn't run.
+      app_blacklist={{ .Values.appBlacklist }}
+
+      [[database]]
+        # Embedded SQLite (dev). Point at Postgres for anything real.
+        engine=sqlite3
+        name=/usr/share/hue/desktop/desktop.db
+
+    [notebook]
+      [[interpreters]]
+        # Trino over the governed Iceberg catalog (native `trino` interface — no
+        # extra driver; talks to the coordinator REST API directly).
+        [[[trino]]]
+          name=Trino
+          interface=trino
+          options='{"url": "{{ .Values.trino.url }}", "user": "{{ .Values.trino.user }}"}'

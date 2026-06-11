@@ -1,0 +1,9 @@
+# Overrides for the hue-on-kind job — layered on top of kind-values.yaml.
+# kind-values keeps the lakehouse (minio + iceberg-rest + trino) on; enable Hue
+# in front of it. The proof asserts the SQL editor boots (is_alive 200) and its
+# config wires the Trino interpreter at the in-cluster `trino` Service.
+#
+# gethue/hue is a public Docker Hub image, so the kind node pulls it directly —
+# no build/`kind load` step (chart default pullPolicy IfNotPresent applies).
+hue:
+  enabled: true

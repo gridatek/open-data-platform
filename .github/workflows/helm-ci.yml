@@ -38,5 +38,7 @@ jobs:
       - name: Template render (smoke)
         run: |
           helm template odp platform/umbrella >/dev/null
+          # Hue is default-off, so render it explicitly to exercise its templates.
+          helm template odp platform/umbrella --set hue.enabled=true >/dev/null
           # Knox is default-off, so render it explicitly to exercise its templates.
           helm template odp platform/umbrella --set knox.enabled=true >/dev/null

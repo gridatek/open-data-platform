@@ -54,6 +54,10 @@ dependencies:
   - name: opdb
     version: "0.1.0"
     condition: opdb.enabled
+  # Local subchart (charts/hue) — the web SQL editor over Trino.
+  - name: hue
+    version: "0.1.0"
+    condition: hue.enabled
   # Local subchart (charts/knox) — the perimeter gateway (≈ CDP Knox).
   - name: knox
     version: "0.1.0"
