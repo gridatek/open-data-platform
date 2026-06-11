@@ -28,14 +28,25 @@ on:
 jobs:
   lakehouse-on-kind:
     runs-on: ubuntu-latest
+    # A Docker Hub pull stall (kind node / images) otherwise hangs the job until
+    # the 6h default — cap it so a flake fails fast instead of blocking the run.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
 
+      - name: Pre-pull the kind node image (Docker Hub flakes; retry)
+        run: |
+          for i in 1 2 3 4 5; do
+            docker pull kindest/node:v1.34.0 && break
+            echo "kindest/node pull attempt $i failed; retrying in 15s ..."
+            sleep 15
+          done
       - name: Create kind cluster
         uses: helm/kind-action@v1
         with:
           cluster_name: odp
+          node_image: kindest/node:v1.34.0
 
       - name: Add chart repos
         run: |
@@ -43,7 +54,7 @@ jobs:
           helm repo add trino https://trinodb.github.io/charts
           helm repo add superset https://apache.github.io/superset
           helm repo add apache-airflow https://airflow.apache.org
-          helm repo update
+          for i in 1 2 3; do helm repo update && break; echo "helm repo update failed (try $i); retrying in 10s ..."; sleep 10; done
 
       - name: Build chart dependencies
         run: helm dependency build platform/umbrella
@@ -82,14 +93,25 @@ jobs:
   # stack. Runs in parallel with the lakehouse job above.
   masking-on-kind:
     runs-on: ubuntu-latest
+    # A Docker Hub pull stall (kind node / images) otherwise hangs the job until
+    # the 6h default — cap it so a flake fails fast instead of blocking the run.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
 
+      - name: Pre-pull the kind node image (Docker Hub flakes; retry)
+        run: |
+          for i in 1 2 3 4 5; do
+            docker pull kindest/node:v1.34.0 && break
+            echo "kindest/node pull attempt $i failed; retrying in 15s ..."
+            sleep 15
+          done
       - name: Create kind cluster
         uses: helm/kind-action@v1
         with:
           cluster_name: odp
+          node_image: kindest/node:v1.34.0
 
       - name: Build and load the Ranger admin image
         run: |
@@ -104,7 +126,7 @@ jobs:
           helm repo add trino https://trinodb.github.io/charts
           helm repo add superset https://apache.github.io/superset
           helm repo add apache-airflow https://airflow.apache.org
-          helm repo update
+          for i in 1 2 3; do helm repo update && break; echo "helm repo update failed (try $i); retrying in 10s ..."; sleep 10; done
 
       - name: Build chart dependencies
         run: helm dependency build platform/umbrella
@@ -134,14 +156,25 @@ jobs:
   # through Trino. Proves the Helm Airflow wiring at runtime, not just in render.
   airflow-on-kind:
     runs-on: ubuntu-latest
+    # A Docker Hub pull stall (kind node / images) otherwise hangs the job until
+    # the 6h default — cap it so a flake fails fast instead of blocking the run.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
 
+      - name: Pre-pull the kind node image (Docker Hub flakes; retry)
+        run: |
+          for i in 1 2 3 4 5; do
+            docker pull kindest/node:v1.34.0 && break
+            echo "kindest/node pull attempt $i failed; retrying in 15s ..."
+            sleep 15
+          done
       - name: Create kind cluster
         uses: helm/kind-action@v1
         with:
           cluster_name: odp
+          node_image: kindest/node:v1.34.0
 
       - name: Build and load the Airflow image (3.2.0 + Trino provider)
         run: |
@@ -157,7 +190,7 @@ jobs:
           helm repo add trino https://trinodb.github.io/charts
           helm repo add superset https://apache.github.io/superset
           helm repo add apache-airflow https://airflow.apache.org
-          helm repo update
+          for i in 1 2 3; do helm repo update && break; echo "helm repo update failed (try $i); retrying in 10s ..."; sleep 10; done
 
       - name: Build chart dependencies
         run: helm dependency build platform/umbrella
@@ -190,14 +223,25 @@ jobs:
   # Trino. Proves the Helm Superset wiring at runtime, not just in render.
   superset-on-kind:
     runs-on: ubuntu-latest
+    # A Docker Hub pull stall (kind node / images) otherwise hangs the job until
+    # the 6h default — cap it so a flake fails fast instead of blocking the run.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
 
+      - name: Pre-pull the kind node image (Docker Hub flakes; retry)
+        run: |
+          for i in 1 2 3 4 5; do
+            docker pull kindest/node:v1.34.0 && break
+            echo "kindest/node pull attempt $i failed; retrying in 15s ..."
+            sleep 15
+          done
       - name: Create kind cluster
         uses: helm/kind-action@v1
         with:
           cluster_name: odp
+          node_image: kindest/node:v1.34.0
 
       - name: Build and load the Superset image (Trino dialect + psycopg2)
         run: |
@@ -212,7 +256,7 @@ jobs:
           helm repo add trino https://trinodb.github.io/charts
           helm repo add superset https://apache.github.io/superset
           helm repo add apache-airflow https://airflow.apache.org
-          helm repo update
+          for i in 1 2 3; do helm repo update && break; echo "helm repo update failed (try $i); retrying in 10s ..."; sleep 10; done
 
       - name: Build chart dependencies
         run: helm dependency build platform/umbrella
@@ -241,14 +285,25 @@ jobs:
   # Proves the Helm Spark wiring at runtime — Spark and Trino share the catalog.
   spark-on-kind:
     runs-on: ubuntu-latest
+    # A Docker Hub pull stall (kind node / images) otherwise hangs the job until
+    # the 6h default — cap it so a flake fails fast instead of blocking the run.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
 
+      - name: Pre-pull the kind node image (Docker Hub flakes; retry)
+        run: |
+          for i in 1 2 3 4 5; do
+            docker pull kindest/node:v1.34.0 && break
+            echo "kindest/node pull attempt $i failed; retrying in 15s ..."
+            sleep 15
+          done
       - name: Create kind cluster
         uses: helm/kind-action@v1
         with:
           cluster_name: odp
+          node_image: kindest/node:v1.34.0
 
       - name: Add chart repos
         run: |
@@ -256,7 +311,7 @@ jobs:
           helm repo add trino https://trinodb.github.io/charts
           helm repo add superset https://apache.github.io/superset
           helm repo add apache-airflow https://airflow.apache.org
-          helm repo update
+          for i in 1 2 3; do helm repo update && break; echo "helm repo update failed (try $i); retrying in 10s ..."; sleep 10; done
 
       - name: Build chart dependencies
         run: helm dependency build platform/umbrella
@@ -285,14 +340,25 @@ jobs:
   # the Iceberg REST catalog, and scales a Deployment through the K8s API.
   console-on-kind:
     runs-on: ubuntu-latest
+    # A Docker Hub pull stall (kind node / images) otherwise hangs the job until
+    # the 6h default — cap it so a flake fails fast instead of blocking the run.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
 
+      - name: Pre-pull the kind node image (Docker Hub flakes; retry)
+        run: |
+          for i in 1 2 3 4 5; do
+            docker pull kindest/node:v1.34.0 && break
+            echo "kindest/node pull attempt $i failed; retrying in 15s ..."
+            sleep 15
+          done
       - name: Create kind cluster
         uses: helm/kind-action@v1
         with:
           cluster_name: odp
+          node_image: kindest/node:v1.34.0
 
       - name: Build and load the console API image
         run: |
@@ -305,7 +371,7 @@ jobs:
           helm repo add trino https://trinodb.github.io/charts
           helm repo add superset https://apache.github.io/superset
           helm repo add apache-airflow https://airflow.apache.org
-          helm repo update
+          for i in 1 2 3; do helm repo update && break; echo "helm repo update failed (try $i); retrying in 10s ..."; sleep 10; done
 
       - name: Build chart dependencies
         run: helm dependency build platform/umbrella
@@ -332,14 +398,25 @@ jobs:
   # assert the hub comes up and spawns a single-user notebook server.
   jupyterhub-on-kind:
     runs-on: ubuntu-latest
+    # A Docker Hub pull stall (kind node / images) otherwise hangs the job until
+    # the 6h default — cap it so a flake fails fast instead of blocking the run.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
 
+      - name: Pre-pull the kind node image (Docker Hub flakes; retry)
+        run: |
+          for i in 1 2 3 4 5; do
+            docker pull kindest/node:v1.34.0 && break
+            echo "kindest/node pull attempt $i failed; retrying in 15s ..."
+            sleep 15
+          done
       - name: Create kind cluster
         uses: helm/kind-action@v1
         with:
           cluster_name: odp
+          node_image: kindest/node:v1.34.0
 
       - name: Build and load the JupyterHub image
         run: |
@@ -352,7 +429,7 @@ jobs:
           helm repo add trino https://trinodb.github.io/charts
           helm repo add superset https://apache.github.io/superset
           helm repo add apache-airflow https://airflow.apache.org
-          helm repo update
+          for i in 1 2 3; do helm repo update && break; echo "helm repo update failed (try $i); retrying in 10s ..."; sleep 10; done
 
       - name: Build chart dependencies
         run: helm dependency build platform/umbrella
@@ -382,14 +459,25 @@ jobs:
   # Secret, then log a run and read it back. MLflow's first runtime proof.
   mlflow-on-kind:
     runs-on: ubuntu-latest
+    # A Docker Hub pull stall (kind node / images) otherwise hangs the job until
+    # the 6h default — cap it so a flake fails fast instead of blocking the run.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
 
+      - name: Pre-pull the kind node image (Docker Hub flakes; retry)
+        run: |
+          for i in 1 2 3 4 5; do
+            docker pull kindest/node:v1.34.0 && break
+            echo "kindest/node pull attempt $i failed; retrying in 15s ..."
+            sleep 15
+          done
       - name: Create kind cluster
         uses: helm/kind-action@v1
         with:
           cluster_name: odp
+          node_image: kindest/node:v1.34.0
 
       - name: Build and load the MLflow image
         run: |
@@ -402,7 +490,7 @@ jobs:
           helm repo add trino https://trinodb.github.io/charts
           helm repo add superset https://apache.github.io/superset
           helm repo add apache-airflow https://airflow.apache.org
-          helm repo update
+          for i in 1 2 3; do helm repo update && break; echo "helm repo update failed (try $i); retrying in 10s ..."; sleep 10; done
 
       - name: Build chart dependencies
         run: helm dependency build platform/umbrella
@@ -446,14 +534,23 @@ jobs:
   atlas-on-kind:
     runs-on: ubuntu-latest
     continue-on-error: true
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
 
+      - name: Pre-pull the kind node image (Docker Hub flakes; retry)
+        run: |
+          for i in 1 2 3 4 5; do
+            docker pull kindest/node:v1.34.0 && break
+            echo "kindest/node pull attempt $i failed; retrying in 15s ..."
+            sleep 15
+          done
       - name: Create kind cluster
         uses: helm/kind-action@v1
         with:
           cluster_name: odp
+          node_image: kindest/node:v1.34.0
 
       - name: Add chart repos
         run: |
@@ -461,7 +558,7 @@ jobs:
           helm repo add trino https://trinodb.github.io/charts
           helm repo add superset https://apache.github.io/superset
           helm repo add apache-airflow https://airflow.apache.org
-          helm repo update
+          for i in 1 2 3; do helm repo update && break; echo "helm repo update failed (try $i); retrying in 10s ..."; sleep 10; done
 
       - name: Build chart dependencies
         run: helm dependency build platform/umbrella
@@ -487,14 +584,25 @@ jobs:
   # in-cluster `trino` Service. Public gethue/hue image — the node pulls it.
   hue-on-kind:
     runs-on: ubuntu-latest
+    # A Docker Hub pull stall (kind node / images) otherwise hangs the job until
+    # the 6h default — cap it so a flake fails fast instead of blocking the run.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
 
+      - name: Pre-pull the kind node image (Docker Hub flakes; retry)
+        run: |
+          for i in 1 2 3 4 5; do
+            docker pull kindest/node:v1.34.0 && break
+            echo "kindest/node pull attempt $i failed; retrying in 15s ..."
+            sleep 15
+          done
       - name: Create kind cluster
         uses: helm/kind-action@v1
         with:
           cluster_name: odp
+          node_image: kindest/node:v1.34.0
 
       - name: Add chart repos
         run: |
@@ -502,7 +610,7 @@ jobs:
           helm repo add trino https://trinodb.github.io/charts
           helm repo add superset https://apache.github.io/superset
           helm repo add apache-airflow https://airflow.apache.org
-          helm repo update
+          for i in 1 2 3; do helm repo update && break; echo "helm repo update failed (try $i); retrying in 10s ..."; sleep 10; done
 
       - name: Build chart dependencies
         run: helm dependency build platform/umbrella
@@ -530,14 +638,25 @@ jobs:
   # and a demo-LDAP user is proxied through to the in-cluster Trino Service (200).
   knox-on-kind:
     runs-on: ubuntu-latest
+    # A Docker Hub pull stall (kind node / images) otherwise hangs the job until
+    # the 6h default — cap it so a flake fails fast instead of blocking the run.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
 
+      - name: Pre-pull the kind node image (Docker Hub flakes; retry)
+        run: |
+          for i in 1 2 3 4 5; do
+            docker pull kindest/node:v1.34.0 && break
+            echo "kindest/node pull attempt $i failed; retrying in 15s ..."
+            sleep 15
+          done
       - name: Create kind cluster
         uses: helm/kind-action@v1
         with:
           cluster_name: odp
+          node_image: kindest/node:v1.34.0
 
       - name: Build and load the Knox gateway image
         run: |
@@ -550,7 +669,7 @@ jobs:
           helm repo add trino https://trinodb.github.io/charts
           helm repo add superset https://apache.github.io/superset
           helm repo add apache-airflow https://airflow.apache.org
-          helm repo update
+          for i in 1 2 3; do helm repo update && break; echo "helm repo update failed (try $i); retrying in 10s ..."; sleep 10; done
 
       - name: Build chart dependencies
         run: helm dependency build platform/umbrella
