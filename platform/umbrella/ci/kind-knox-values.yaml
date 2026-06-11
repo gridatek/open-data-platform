@@ -7,3 +7,12 @@ knox:
   image:
     # Built + `kind load`ed in the job, so pull the local tag, never GHCR.
     pullPolicy: Never
+
+# Trino sits behind the Knox gateway here, so it must accept the X-Forwarded-*
+# headers Knox adds when it dispatches. Without this Trino (Airlift/Jetty) refuses
+# every proxied request with "HTTP 406 — Server configuration does not allow
+# processing of the X-Forwarded-For header". This is the documented Trino setting
+# for running behind a proxy/load balancer.
+trino:
+  additionalConfigProperties:
+    - http-server.process-forwarded=true

@@ -14,12 +14,12 @@
 set -euo pipefail
 
 NS="${NS:-odp}"
-# Probe the Trino *UI* route (the one the Trino service definition declares as its
-# context, and the one the compose overlay documents). The bare REST endpoint
-# /v1/info returns 406 when forwarded through Knox's dispatch — Trino's content
-# negotiation rejects the proxied request — whereas the UI route is what's meant
-# to traverse the gateway, so it's the honest "did Knox proxy to Trino?" signal.
-BASE="https://localhost:8443/gateway/odp/trino/ui/"
+# /v1/info is Trino's lightweight, unauthenticated readiness endpoint (200 + JSON
+# version) — a clean "did Knox reach Trino?" signal. It works through the gateway
+# once Trino is told to accept Knox's X-Forwarded-* headers
+# (http-server.process-forwarded=true, set in kind-knox-values.yaml); without that
+# Trino answers every proxied request with 406.
+BASE="https://localhost:8443/gateway/odp/trino/v1/info"
 
 echo "[proof] waiting for knox to be Ready ..."
 kubectl -n "$NS" rollout status deploy/knox --timeout=300s
