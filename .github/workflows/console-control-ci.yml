@@ -37,7 +37,8 @@ jobs:
         run: cp .env.example .env
 
       - name: Build and start lakehouse + governance + console
-        run: docker compose up -d --build console-api spark trino
+        run: |
+          for i in 1 2 3; do if docker compose up -d --build console-api spark trino; then break; fi; if [ "$i" = 3 ]; then echo "compose up still failing after $i attempts"; exit 1; fi; echo "compose up failed (attempt $i; likely a Docker Hub pull flake); retrying in 15s ..."; sleep 15; done
 
       - name: Wait for Trino
         run: |

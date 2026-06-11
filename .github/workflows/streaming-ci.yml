@@ -31,7 +31,8 @@ jobs:
         run: cp .env.example .env
 
       - name: Start Kafka + Spark + the lakehouse (Trino)
-        run: docker compose -f docker-compose.yml -f docker-compose.services.yml up -d kafka spark trino
+        run: |
+          for i in 1 2 3; do if docker compose -f docker-compose.yml -f docker-compose.services.yml up -d kafka spark trino; then break; fi; if [ "$i" = 3 ]; then echo "compose up still failing after $i attempts"; exit 1; fi; echo "compose up failed (attempt $i; likely a Docker Hub pull flake); retrying in 15s ..."; sleep 15; done
 
       - name: Wait for the Kafka broker
         run: |
