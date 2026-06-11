@@ -39,7 +39,8 @@ jobs:
 
       # Atlas (embedded HBase + Solr) is memory-hungry — boot it alone.
       - name: Start Atlas
-        run: docker compose -f docker-compose.yml -f docker-compose.governance.yml up -d atlas
+        run: |
+          for i in 1 2 3; do if docker compose -f docker-compose.yml -f docker-compose.governance.yml up -d atlas; then break; fi; if [ "$i" = 3 ]; then echo "compose up still failing after $i attempts"; exit 1; fi; echo "compose up failed (attempt $i; likely a Docker Hub pull flake); retrying in 15s ..."; sleep 15; done
 
       - name: Wait for Atlas REST (up to ~15 min)
         run: |
@@ -61,7 +62,8 @@ jobs:
       # block the PR. It's validated locally (OpenLineage capture + the bridge).
       - name: Start Spark (+ iceberg-rest + minio)
         continue-on-error: true
-        run: docker compose -f docker-compose.yml -f docker-compose.governance.yml up -d spark
+        run: |
+          for i in 1 2 3; do if docker compose -f docker-compose.yml -f docker-compose.governance.yml up -d spark; then break; fi; if [ "$i" = 3 ]; then echo "compose up still failing after $i attempts"; exit 1; fi; echo "compose up failed (attempt $i; likely a Docker Hub pull flake); retrying in 15s ..."; sleep 15; done
 
       - name: Automatic lineage — capture from Spark (OpenLineage) into Atlas
         continue-on-error: true

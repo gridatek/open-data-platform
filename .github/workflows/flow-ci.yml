@@ -23,7 +23,8 @@ jobs:
       - name: Create .env from example
         run: cp .env.example .env
       - name: Start NiFi
-        run: docker compose -f docker-compose.yml -f docker-compose.services.yml up -d nifi
+        run: |
+          for i in 1 2 3; do if docker compose -f docker-compose.yml -f docker-compose.services.yml up -d nifi; then break; fi; if [ "$i" = 3 ]; then echo "compose up still failing after $i attempts"; exit 1; fi; echo "compose up failed (attempt $i; likely a Docker Hub pull flake); retrying in 15s ..."; sleep 15; done
       - name: Build + run an automated flow via the REST API
         run: NIFI_URL=http://localhost:8095 bash ../platform/flow/nifi-flow.sh
       - name: Dump logs on failure
