@@ -371,7 +371,7 @@ hue:
 #   a service: https://localhost:8443/gateway/odp/trino/v1/info
 # Knox authenticates at the edge; Ranger still does fine-grained authz (the CDP
 # split). Backends keep their own Services too — Knox is additive, not a swap.
-# The topology proxies all 11 roles; backends you haven't enabled simply 404
+# The topology proxies all 12 roles; backends you haven't enabled simply 404
 # until you do. Superset/Airflow URLs are computed from the release name.
 knox:
   enabled: false

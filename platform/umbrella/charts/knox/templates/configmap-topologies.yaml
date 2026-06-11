@@ -67,6 +67,7 @@ data:
         <service><role>MLFLOW</role><url>{{ $b.mlflow | default "http://mlflow:5000" }}</url></service>
         <service><role>NIFI</role><url>{{ $b.nifi | default "http://nifi:8080" }}</url></service>
         <service><role>JUPYTER</role><url>{{ $b.jupyter | default "http://jupyterhub:8000" }}</url></service>
+        <service><role>HUE</role><url>{{ $b.hue | default "http://hue:8888" }}</url></service>
 
         <!-- Control plane -->
         <service><role>CONSOLE</role><url>{{ $b.console | default "http://console-api:8090" }}</url></service>
