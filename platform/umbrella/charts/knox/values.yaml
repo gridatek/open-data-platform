@@ -50,9 +50,12 @@ backends:
   jupyter: ""    # http://jupyterhub:8000
   console: ""    # http://console-api:8090
 
+# Two JVMs share this container — the gateway and the bundled demo LDAP
+# (ApacheDS) — so their combined RSS (heaps + metaspace + threads) needs headroom
+# above 1Gi, otherwise the pod is OOMKilled (exit 137) into CrashLoopBackOff.
 resources:
   requests:
     cpu: 100m
-    memory: 512Mi
-  limits:
     memory: 1Gi
+  limits:
+    memory: 2Gi
