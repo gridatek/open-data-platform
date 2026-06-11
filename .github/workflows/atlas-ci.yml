@@ -25,6 +25,8 @@ on:
 jobs:
   lineage-proof:
     runs-on: ubuntu-latest
+    # Cap the job so a Docker Hub pull stall fails fast, never the 6h default.
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: quickstart
