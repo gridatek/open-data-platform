@@ -48,6 +48,7 @@ backends:
   mlflow: ""     # http://mlflow:5000
   nifi: ""       # http://nifi:8080
   jupyter: ""    # http://jupyterhub:8000
+  hue: ""        # http://hue:8888
   console: ""    # http://console-api:8090
 
 # Two JVMs share this container — the gateway and the bundled demo LDAP
