@@ -1,0 +1,51 @@
+name: hive-ci
+
+# LEGACY lab proof: bring up the Hive Metastore + Trino's `hive` catalog over
+# MinIO, create a Hive table, query it, then migrate it into Iceberg and assert
+# the row counts + totals match. Hive is kept for learning only — see
+# platform/warehouse/hive/README.md.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "quickstart/docker-compose.yml"
+      - "quickstart/docker-compose.hive.yml"
+      - "platform/warehouse/hive/**"
+      - ".github/workflows/hive-ci.yml"
+  pull_request:
+    paths:
+      - "quickstart/docker-compose.yml"
+      - "quickstart/docker-compose.hive.yml"
+      - "platform/warehouse/hive/**"
+      - ".github/workflows/hive-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  hive-smoke:
+    runs-on: ubuntu-latest
+    # Cap the job so a Docker Hub pull stall fails fast, never the 6h default.
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: quickstart
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create .env from the example
+        run: test -f .env || cp .env.example .env
+
+      - name: Start the lean Hive slice (MinIO + Trino + Hive Metastore)
+        run: |
+          for i in 1 2 3; do if docker compose -f docker-compose.yml -f docker-compose.hive.yml up -d minio minio-init trino hive-metastore; then break; fi; if [ "$i" = 3 ]; then echo "compose up still failing after $i attempts"; exit 1; fi; echo "compose up failed (attempt $i; likely a Docker Hub pull flake); retrying in 15s ..."; sleep 15; done
+
+      - name: Hive legacy proof — query a Hive table, then migrate it to Iceberg
+        run: bash ../platform/warehouse/hive/hive-legacy.sh
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.hive.yml logs --no-color
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.hive.yml down -v

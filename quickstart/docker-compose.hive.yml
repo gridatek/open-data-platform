@@ -1,0 +1,61 @@
+# ───────────────────────────────────────────────────────────────
+# LEGACY lab — Apache Hive Metastore + Trino's `hive` connector.
+#
+# This is the OLD world on purpose. CDP's (and this repo's) modern table format
+# is Iceberg; Hive tables are what you migrate away from. We keep a tiny Hive
+# Metastore (HMS) around only so you can create a Hive table, query it from
+# Trino, and then practise the Hive → Iceberg migration. See
+# platform/warehouse/hive/README.md.
+#
+# Overlay it on the base lakehouse (it reuses MinIO + Trino):
+#
+#   docker compose --project-directory quickstart \
+#     -f quickstart/docker-compose.yml \
+#     -f quickstart/docker-compose.hive.yml \
+#     up -d minio minio-init trino hive-metastore
+#   # or, lean by default:  make hive
+#
+#   HMS (Thrift) : thrift://localhost:9083
+#   Trino        : http://localhost:8080   →  catalog `hive`
+#
+# Run the proof:  ./platform/warehouse/hive/hive-legacy.sh
+# ───────────────────────────────────────────────────────────────
+
+name: odp-quickstart
+
+services:
+  # The classic Hive Metastore, standalone, with the bundled embedded Derby DB.
+  # Single container, metadata is ephemeral (no volume) — fitting for a
+  # throwaway legacy demo. The official Apache image runs HMS with
+  # SERVICE_NAME=metastore and self-initialises the Derby schema.
+  hive-metastore:
+    image: apache/hive:4.0.0
+    container_name: odp-hive-metastore
+    environment:
+      SERVICE_NAME: metastore
+      # Put the (already-bundled) Hadoop S3A jars on the metastore classpath so
+      # it can resolve the s3a:// locations it stores for Hive tables on MinIO.
+      HADOOP_CLASSPATH: /opt/hadoop/share/hadoop/tools/lib/hadoop-aws-3.3.6.jar:/opt/hadoop/share/hadoop/tools/lib/aws-java-sdk-bundle-1.12.367.jar
+    volumes:
+      # S3A → MinIO config for the metastore (see the file's header).
+      - ../platform/warehouse/hive/core-site.xml:/opt/hive/conf/core-site.xml:ro
+    ports:
+      - "9083:9083"
+    networks:
+      - odp
+
+  # Give Trino both catalogs by REPLACING its catalog dir with the lab's own
+  # (Compose dedups the /etc/trino/catalog mount by target, so this overrides the
+  # base). The lab dir carries `hive.properties` + a copy of `iceberg.properties`
+  # (the migration target). We swap the whole dir rather than nest a single file
+  # mount inside the base one — nesting needs a writable parent and leaves an
+  # empty stub file behind in quickstart/trino/etc/catalog on the host.
+  trino:
+    depends_on:
+      - hive-metastore
+    volumes:
+      - ../platform/warehouse/hive/catalog:/etc/trino/catalog:ro
+
+networks:
+  odp:
+    name: odp

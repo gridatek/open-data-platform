@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+  LEGACY lab — S3A (Hadoop) config so the Hive Metastore can resolve the
+  s3a://warehouse/... locations it stores for Hive tables, backed by MinIO.
+
+  The Hive connector in Trino does the actual data IO with its own native S3
+  client; HMS needs this only to qualify/create the table + schema directories.
+  Mounted into the metastore container at /opt/hive/conf/core-site.xml.
+  Dev-only creds, in sync with quickstart/.env.example.
+-->
+<configuration>
+  <property>
+    <name>fs.s3a.impl</name>
+    <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
+  </property>
+  <property>
+    <name>fs.s3a.endpoint</name>
+    <value>http://minio:9000</value>
+  </property>
+  <property>
+    <name>fs.s3a.path.style.access</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>fs.s3a.connection.ssl.enabled</name>
+    <value>false</value>
+  </property>
+  <property>
+    <name>fs.s3a.aws.credentials.provider</name>
+    <value>org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider</value>
+  </property>
+  <property>
+    <name>fs.s3a.access.key</name>
+    <value>admin</value>
+  </property>
+  <property>
+    <name>fs.s3a.secret.key</name>
+    <value>password</value>
+  </property>
+</configuration>
