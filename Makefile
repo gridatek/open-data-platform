@@ -14,7 +14,7 @@ COMPOSE := docker compose --project-directory quickstart \
 CORE := docker compose --project-directory quickstart -f quickstart/docker-compose.yml
 
 .DEFAULT_GOAL := help
-.PHONY: help env core all governance services console opdb jupyterhub knox hue seed down ps logs
+.PHONY: help env core all governance services console opdb jupyterhub knox hue hive seed down ps logs
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -62,6 +62,11 @@ hue: env ## Lakehouse + Hue (the web SQL editor over Trino)
 	docker compose --project-directory quickstart \
 	  -f quickstart/docker-compose.yml \
 	  -f quickstart/docker-compose.hue.yml up -d
+
+hive: env ## LEGACY lab — Trino + Hive Metastore over MinIO (the Hive->Iceberg lesson; lean)
+	docker compose --project-directory quickstart \
+	  -f quickstart/docker-compose.yml \
+	  -f quickstart/docker-compose.hive.yml up -d minio minio-init trino hive-metastore
 
 seed: ## Run the Spark seed job into iceberg.smoke.events
 	$(COMPOSE) exec spark spark-submit /home/iceberg/jobs/seed_lakehouse.py
